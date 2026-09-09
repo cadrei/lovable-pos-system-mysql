@@ -25,7 +25,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const nav: { to: string; label: string; icon: LucideIcon; perm: string }[] = [
   { to: "/panel", label: "Panel", icon: LayoutDashboard, perm: "ventas.ver" },
   { to: "/ventas", label: "Ventas (POS)", icon: ScanLine, perm: "ventas.crear" },
-  { to: "/facturacion", label: "Facturaci贸n", icon: Receipt, perm: "facturacion.ver" },
+  { to: "/facturacion", label: "Facturación", icon: Receipt, perm: "facturacion.ver" },
   { to: "/inventario", label: "Inventario", icon: Boxes, perm: "inventario.ver" },
   {
     to: "/productosBeneficios",
