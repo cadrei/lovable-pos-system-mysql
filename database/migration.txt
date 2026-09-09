@@ -1,0 +1,1499 @@
+CREATE DATABASE IF NOT EXISTS Naturista;
+USE Naturista;
+
+-- =======================================================================================================================================================
+-- TABLAS ESQUEMA  INVENTARIO
+-- =======================================================================================================================================================
+-- =========================================
+-- TABLA: CATEGORIAS
+-- Categorias de Producto
+-- =========================================
+DROP TABLE IF EXISTS CATEGORIAS;
+CREATE TABLE CATEGORIAS (
+    ID_CATEGORIA		VARCHAR(10)   	NOT NULL PRIMARY KEY COMMENT 'Código único de la categoría',
+    NOMBRE_CATEGORIA	VARCHAR(100)  	NOT NULL COMMENT 'Nombre de la categoría',
+    DESCRIPCION			VARCHAR(300)  	COMMENT 'Descripción detallada de la categoría',
+    ESTADO				CHAR(1)       	DEFAULT 'A' COMMENT 'Estado de la categoría (A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test)',
+    FECHA_CREACION		TIMESTAMP		DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora de creación del registro',
+    FECHA_ACTUALIZACION	TIMESTAMP   	DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Última fecha de actualización del registro',
+    CONSTRAINT chk_estado_cat CHECK (ESTADO IN ('A','I','S','P','E','O','R','T'))
+) COMMENT='Tabla de categorías de productos para clasificación en inventario';
+
+-- =========================================
+-- TABLA: SUBCATEGORIAS
+-- SubCategorias de Producto
+-- =========================================
+DROP TABLE IF EXISTS SUBCATEGORIAS;
+CREATE TABLE SUBCATEGORIAS (
+    ID_SUBCATEGORIA    	VARCHAR(10)   	NOT NULL PRIMARY KEY COMMENT 'Código único de la subcategoría',
+    ID_CATEGORIA       	VARCHAR(10)   	NOT NULL COMMENT 'Código de la categoría padre',
+    NOMBRE             	VARCHAR(100)  	NOT NULL COMMENT 'Nombre de la subcategoría',
+    DESCRIPCION        	VARCHAR(300)  	COMMENT 'Descripción detallada de la subcategoría',
+    ESTADO             	CHAR(1)       	DEFAULT 'A' COMMENT 'Estado de la subcategoría (A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test)',
+    FECHA_CREACION    	TIMESTAMP     	DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora de creación del registro',
+    FECHA_ACTUALIZACION	TIMESTAMP		DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Última fecha de actualización del registro',
+    CONSTRAINT chk_estado_sct CHECK (ESTADO IN ('A','I','S','P','E','O','R','T')),
+    CONSTRAINT fk_categoria FOREIGN KEY (ID_CATEGORIA) REFERENCES CATEGORIAS(ID_CATEGORIA) ON DELETE CASCADE
+) COMMENT='Tabla de subcategorías de productos, vinculadas a categorías principales';
+
+-- =========================================
+-- TABLA: STOCK
+-- Stocks Maximos y Minimos para cada tipo de producto
+-- =========================================
+DROP TABLE IF EXISTS STOCK;
+CREATE TABLE STOCK (
+    ID_STOCK           	VARCHAR(10)   	NOT NULL PRIMARY KEY COMMENT 'Código único de stock',
+    TIPO_STOCK         	CHAR(1)       	NOT NULL COMMENT 'Tipo de stock (M=Mínimo, X=Máximo)',
+    AMBITO             	VARCHAR(50)   	NOT NULL COMMENT 'Ámbito o categoría del stock (General, Aceites, Colágeno, etc.)',
+    DESCRIPCION        	VARCHAR(200)  	COMMENT 'Descripción detallada del stock',
+    CANTIDAD           	INT           	NOT NULL COMMENT 'Cantidad definida para el stock',
+    ESTADO             	CHAR(1)       	DEFAULT 'A' COMMENT 'Estado del registro (A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test)',
+    FECHA_CREACION		TIMESTAMP     	DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora de creación del registro',
+    FECHA_ACTUALIZACION	TIMESTAMP		DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Última fecha de actualización del registro',
+    CONSTRAINT chk_tipo_stock CHECK (TIPO_STOCK IN ('M','X')),
+    CONSTRAINT chk_estado_stock CHECK (ESTADO IN ('A','I','S','P','E','O','R','T'))
+) COMMENT='Tabla de parámetros de stock mínimo y máximo por ámbito o categoría';
+
+-- =========================================
+-- TABLA: PRODUCTOS
+-- Productos del Inventario
+-- =========================================
+DROP TABLE IF EXISTS PRODUCTOS;
+CREATE TABLE PRODUCTOS (
+    ID_PRODUCTO			VARCHAR(20)		NOT NULL PRIMARY KEY COMMENT 'Código único del producto',
+    NOMBRE_PRODUCTO		VARCHAR(200)	NOT NULL COMMENT 'Nombre completo del producto',
+    PVP					DECIMAL(10,3)	NOT NULL COMMENT 'Precio de venta al público',
+    DESCRIPCION			VARCHAR(500)	COMMENT 'Descripción detallada del producto',
+    ID_SUBCATEGORIA		VARCHAR(10)		NOT NULL COMMENT 'Código de subcategoría según catálogo definido',
+    ETIQUETAS			VARCHAR(300)	COMMENT 'Palabras clave para búsqueda y clasificación',
+    UNIDAD_MEDIDA		VARCHAR(10)		COMMENT 'Unidad de medida (ml, g, cap, etc.)',
+    PESO_VOLUMEN		INT				COMMENT 'Valor numérico del peso o volumen',
+    ID_LABORATORIO		VARCHAR(20)		COMMENT 'Identificador del laboratorio fabricante',
+    CODIGO_BARRAS		VARCHAR(50)		COMMENT 'Código de barras (EAN/UPC), se usa VARCHAR para conservar ceros iniciales',
+    FECHA_CADUCIDAD		DATE			COMMENT 'Fecha de caducidad del producto',
+    ID_STOCK_MIN		VARCHAR(20)		DEFAULT 0 COMMENT 'Stock mínimo recomendado',
+    ID_STOCK_MAX		VARCHAR(20)		DEFAULT 0 COMMENT 'Stock máximo recomendado',
+    ID_PROVEEDOR		VARCHAR(20)		COMMENT 'Identificador del proveedor',
+    FECHA_CREACION		TIMESTAMP 		DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora de creación del registro',
+    FECHA_ACTUALIZACION	TIMESTAMP 		DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Última fecha de actualización del registro',
+    ESTADO             	CHAR(1) 		DEFAULT 'A' COMMENT 'Estado del producto (A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test)',
+    CONSTRAINT chk_estado CHECK (ESTADO IN ('A','I','S','P','E','O','R','T')),
+    CONSTRAINT fk_producto_subcategoria FOREIGN KEY (ID_SUBCATEGORIA) REFERENCES SUBCATEGORIAS(ID_SUBCATEGORIA) ON DELETE RESTRICT
+) COMMENT='Tabla de productos con información de inventario, clasificación y auditoría';
+-- Pendiente - agregar campo url_imagen que apunte a una ruta relativa de imagenes del proyecto, con el nombre de la imagen del producto
+-- =========================================
+-- TABLA: SUCURSALES
+-- Informacion de Sucursales
+-- =========================================
+DROP TABLE IF EXISTS SUCURSALES;
+CREATE TABLE SUCURSALES (
+    ID_SUCURSAL        	VARCHAR(10)   NOT NULL PRIMARY KEY COMMENT 'Código único de la sucursal',
+    NOMBRE_SUCURSAL    	VARCHAR(150)  NOT NULL COMMENT 'Nombre de la sucursal',
+    DIRECCION_SUCURSAL 	VARCHAR(300)  NOT NULL COMMENT 'Dirección física de la sucursal',
+    TELEFONO           	VARCHAR(20)   COMMENT 'Teléfono de contacto de la sucursal',
+    EMAIL              	VARCHAR(100)  COMMENT 'Correo electrónico de la sucursal',
+    RESPONSABLE        	VARCHAR(100)  COMMENT 'Nombre del responsable o administrador de la sucursal',
+    RUC_SUCURSAL		VARCHAR(13)	  NOT NULL COMMENT 'Ruc de la Sucursal o Empresa',
+    ESTADO             	CHAR(1)       DEFAULT 'A' COMMENT 'Estado de la sucursal (A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test)',
+    FECHA_CREACION     	TIMESTAMP     DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora de creación del registro',
+    FECHA_ACTUALIZACION TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Última fecha de actualización del registro',
+    CONSTRAINT chk_estado_sucursal CHECK (ESTADO IN ('A','I','S','P','E','O','R','T'))
+) COMMENT='Tabla de sucursales donde se gestionan productos e inventarios';
+
+-- =========================================
+-- TABLA: PRODUCTOS_SUCURSAL
+-- Registro de Productos por Sucursal
+-- =========================================
+DROP TABLE IF EXISTS PRODUCTOS_SUCURSAL;
+CREATE TABLE PRODUCTOS_SUCURSAL (
+    ID_PRODUCTO        	VARCHAR(20)   	NOT NULL COMMENT 'Código del producto',
+    ID_SUCURSAL        	VARCHAR(10)   	NOT NULL COMMENT 'Código de la sucursal',
+    CANTIDAD           	INT           	NOT NULL DEFAULT 0 COMMENT 'Cantidad disponible en la sucursal',
+    ESTADO             	CHAR(1)       	DEFAULT 'A' COMMENT 'Estado del registro (A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test)',
+    FECHA_CREACION     	TIMESTAMP     	DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora de creación del registro',
+    FECHA_ACTUALIZACION	TIMESTAMP		DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Última fecha de actualización del registro',
+    CONSTRAINT chk_estado_prod_sucursal CHECK (ESTADO IN ('A','I','S','P','E','O','R','T')),
+    CONSTRAINT pk_prod_sucursal PRIMARY KEY (ID_PRODUCTO, ID_SUCURSAL),
+    CONSTRAINT fk_prod_sucursal_producto FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID_PRODUCTO) ON DELETE CASCADE,
+    CONSTRAINT fk_prod_sucursal_sucursal FOREIGN KEY (ID_SUCURSAL) REFERENCES SUCURSALES(ID_SUCURSAL) ON DELETE CASCADE
+) COMMENT='Tabla que relaciona productos con las sucursales y su inventario disponible';
+
+-- =========================================
+-- TABLA: BENEFICIOS_SINTOMAS
+-- Catálogo de Beneficios y Sintomas asociados a productos
+-- =========================================
+DROP TABLE IF EXISTS BENEFICIOS_SINTOMAS;
+CREATE TABLE BENEFICIOS_SINTOMAS (
+    ID_SINT_BENEF       	VARCHAR(10)   	NOT NULL PRIMARY KEY COMMENT 'Código único del síntoma o beneficio',
+    NOMBRE_SINT_BENEF   	VARCHAR(150)  	NOT NULL COMMENT 'Nombre del síntoma o beneficio',
+    DESCRIPCION_SINT_BENEF 	VARCHAR(500)	COMMENT 'Descripción detallada del síntoma o beneficio',
+    ESTADO              	CHAR(1)       	DEFAULT 'A' COMMENT 'Estado del registro (A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test)',
+    FECHA_CREACION      	TIMESTAMP     	DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora de creación del registro',
+    FECHA_ACTUALIZACION 	TIMESTAMP     	DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Última fecha de actualización del registro',
+    CONSTRAINT chk_estado_ben CHECK (ESTADO IN ('A','I','S','P','E','O','R','T'))
+) COMMENT='Tabla de síntomas y beneficios asociados a productos naturales';
+
+-- =========================================
+-- TABLA: PRODUCTOS_BENEFICIOS
+-- Tabla intermedia que relaciona productos con sus beneficios o síntomas asociados
+-- =========================================
+DROP TABLE IF EXISTS PRODUCTOS_BENEFICIOS;
+CREATE TABLE PRODUCTOS_BENEFICIOS (
+    ID_PRODUCTO        	VARCHAR(20)   	NOT NULL COMMENT 'Código del producto',
+    ID_SINT_BENEF      	VARCHAR(10)   	NOT NULL COMMENT 'Código del síntoma/beneficio',
+    ESTADO             	CHAR(1)       	DEFAULT 'A' COMMENT 'Estado de la relación A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test',
+    FECHA_CREACION     	TIMESTAMP     	DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora de creación del registro',
+    FECHA_ACTUALIZACION	TIMESTAMP		DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Última fecha de actualización del registro',
+    CONSTRAINT chk_estado_prodben CHECK (ESTADO IN ('A','I','S','P','E','O','R','T')),
+    CONSTRAINT pk_prod_benef PRIMARY KEY (ID_PRODUCTO, ID_SINT_BENEF),
+    CONSTRAINT fk_prod_benef_producto FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID_PRODUCTO) ON DELETE CASCADE,
+    CONSTRAINT fk_prod_benef_sint FOREIGN KEY (ID_SINT_BENEF) REFERENCES BENEFICIOS_SINTOMAS(ID_SINT_BENEF) ON DELETE RESTRICT
+) COMMENT='Tabla intermedia que relaciona productos con sus beneficios o síntomas asociados';
+
+-- =========================================
+-- TABLA: PROMOCIONES_COMBOS
+-- Tabla unificada de promociones y combos
+-- =========================================
+DROP TABLE IF EXISTS PROMOCIONES_COMBOS;
+CREATE TABLE PROMOCIONES_COMBOS (
+    ID_PROMO_COMBO      VARCHAR(10) PRIMARY KEY,
+    TIPO                CHAR(1) NOT NULL COMMENT 'P=Promoción, C=Combo',
+    DESCRIPCION         VARCHAR(200) NOT NULL,
+    CRITERIO            VARCHAR(200) COMMENT 'Condición o regla de aplicación',
+    FECHA_INICIO        DATE NOT NULL,
+    FECHA_FIN           DATE NOT NULL,
+    ESTADO              CHAR(1) DEFAULT 'A' COMMENT 'A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test',
+    USOS_MAXIMOS        INT DEFAULT NULL COMMENT 'Número máximo de usos permitidos',
+    CANAL               VARCHAR(50) COMMENT 'Canal de aplicación (online, tienda, etc.)',
+    FECHA_CREACION      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FECHA_ACTUALIZACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_tipo_promo CHECK (TIPO IN ('P','C')),
+    CONSTRAINT chk_estado_promo CHECK (ESTADO IN ('A','I','S','P','E','O','R','T'))
+) COMMENT='Tabla unificada de promociones y combos';
+
+-- =========================================
+-- TABLA: PROMOCIONES_COMBOS
+-- Detalle de productos y descuentos aplicables en promociones
+-- =========================================
+DROP TABLE IF EXISTS PROMOCIONES_DETALLE;
+CREATE TABLE PROMOCIONES_DETALLE (
+    ID_DETALLE          	INT AUTO_INCREMENT PRIMARY KEY,
+    ID_PROMO_COMBO      	VARCHAR(10) NOT NULL,
+    ID_PRODUCTO         	VARCHAR(20) NOT NULL,
+    TIPO_DESCUENTO      	CHAR(1) COMMENT 'P=Porcentaje, V=Valor fijo, G=Producto gratis, C=Cantidad (ej. 3x2)',
+    VALOR_DESCUENTO     	DECIMAL(10,2) COMMENT 'Porcentaje o valor de descuento',
+    CONSTRAINT fk_promocion FOREIGN KEY (ID_PROMO_COMBO) REFERENCES PROMOCIONES_COMBOS(ID_PROMO_COMBO) ON DELETE CASCADE,
+    CONSTRAINT fk_producto_prom FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID_PRODUCTO) ON DELETE RESTRICT
+) COMMENT='Detalle de productos y descuentos aplicables en promociones';
+
+-- =========================================
+-- TABLA: COMBOS_DETALLE
+-- Detalle de productos incluidos en combos
+-- =========================================
+DROP TABLE IF EXISTS COMBOS_DETALLE;
+CREATE TABLE COMBOS_DETALLE (
+    ID_DETALLE          INT AUTO_INCREMENT PRIMARY KEY,
+    ID_PROMO_COMBO      VARCHAR(10) NOT NULL,
+    ID_PRODUCTO         VARCHAR(20) NOT NULL,
+    CANTIDAD_PRODUCTO   INT NOT NULL DEFAULT 1,
+    CONSTRAINT fk_combo FOREIGN KEY (ID_PROMO_COMBO) REFERENCES PROMOCIONES_COMBOS(ID_PROMO_COMBO) ON DELETE CASCADE,
+    CONSTRAINT fk_producto_combo FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID_PRODUCTO) ON DELETE RESTRICT
+) COMMENT='Detalle de productos incluidos en combos';
+
+-- =========================================
+-- TABLA: AUDITORIA_UPDATE
+-- Tabla de auditoría para registros actualizados
+-- =========================================
+DROP TABLE IF EXISTS AUDITORIA_UPDATE;
+CREATE TABLE AUDITORIA_UPDATE (
+    ID_LOG          INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único del log',
+    NOMBRE_TABLA    VARCHAR(100) NOT NULL COMMENT 'Nombre de la tabla afectada',
+    CLAVE_PRIMARIA  VARCHAR(100) NOT NULL COMMENT 'Identificador del registro modificado',
+    CAMPO           VARCHAR(100) NOT NULL COMMENT 'Nombre del campo modificado',
+    VALOR_ANTERIOR  VARCHAR(500) COMMENT 'Valor antes de la modificación',
+    VALOR_NUEVO     VARCHAR(500) COMMENT 'Valor después de la modificación',
+    USUARIO         VARCHAR(100) NOT NULL COMMENT 'Usuario que realizó la modificación',
+    FECHA_CAMBIO    TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora del cambio'
+) COMMENT='Tabla de auditoría para registros actualizados';
+
+-- =========================================
+-- TABLA: AUDITORIA_UPDATE
+-- Tabla de auditoría para registros eliminados
+-- =========================================
+DROP TABLE IF EXISTS AUDITORIA_DELETE;
+CREATE TABLE AUDITORIA_DELETE (
+	ID_LOG				INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único del log',
+    NOMBRE_TABLA    	VARCHAR(100) NOT NULL COMMENT 'Nombre de la tabla afectada',
+    CLAVE_PRIMARIA  	VARCHAR(100) NOT NULL COMMENT 'Identificador del registro eliminado',
+    VALORES_OLD     	TEXT COMMENT 'Concatenación de todos los valores del registro eliminado',
+    USUARIO         	VARCHAR(100) NOT NULL COMMENT 'Usuario que realizó la eliminación',
+    FECHA_ELIMINACION 	TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora de la eliminación'
+) COMMENT='Tabla de auditoría para registros eliminados';
+
+-- =======================================================================================================================================================
+-- TABLAS ESQUEMA VENTAS
+-- =======================================================================================================================================================
+-- =========================================
+-- TABLA: TIPO_DOCUMENTO
+-- Catálogo de tipos de documento
+-- =========================================
+DROP TABLE IF EXISTS TIPO_DOCUMENTO;
+CREATE TABLE TIPO_DOCUMENTO (
+    ID_TIPO_DOC VARCHAR(10) PRIMARY KEY COMMENT 'Identificador único del tipo de documento',
+    NOMBRE_TIPO_DOC VARCHAR(50) NOT NULL COMMENT 'Nombre del tipo de documento (Cédula, RUC, Pasaporte, etc.)',
+    DETALLE_TIPO_DOC VARCHAR(100) COMMENT 'Descripción detallada del tipo de documento',
+    LONGITUD_DOC INT NOT NULL COMMENT 'Número de dígitos o caracteres esperados',
+    FUNCION_VALIDACION VARCHAR(50) NOT NULL COMMENT 'Nombre de la función que valida el documento'
+);
+-- =========================================
+-- TABLA: CLIENTE
+-- Registro de clientes con validación de documento y correo
+-- =========================================
+DROP TABLE IF EXISTS CLIENTE;
+CREATE TABLE CLIENTE (
+    ID_CLIENTE INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único del cliente',
+    ID_DOCUMENTO VARCHAR(13) NOT NULL UNIQUE COMMENT 'Número de documento único del cliente',
+    ID_TIPO_DOC VARCHAR(10) NOT NULL COMMENT 'Tipo de documento, FK hacia TIPO_DOCUMENTO',
+    NOMBRES VARCHAR(200) NOT NULL COMMENT 'Nombres completos del cliente',
+    EMAIL VARCHAR(100) COMMENT 'Correo electrónico del cliente',
+    TELEFONO VARCHAR(100) COMMENT 'Teléfono de contacto',
+    DIRECCION VARCHAR(350) COMMENT 'Dirección física del cliente',
+    ESTADO CHAR(1) DEFAULT 'A' COMMENT 'Estado del cliente: A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test',
+    FECHA_CREACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha de creación del registro',
+    FECHA_MODIFICACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Fecha de última modificación',
+    CONSTRAINT chk_estado_cliente CHECK (ESTADO IN ('A','I','S','P','E','O','R','T')),
+    CONSTRAINT fk_cliente_tipo_doc FOREIGN KEY (ID_TIPO_DOC) REFERENCES TIPO_DOCUMENTO(ID_TIPO_DOC) ON DELETE RESTRICT
+);
+-- =========================================
+-- TABLA: EMPLEADO
+-- Registro de empleados asociados a sucursales
+-- =========================================
+DROP TABLE IF EXISTS EMPLEADO;
+CREATE TABLE EMPLEADO (
+    ID_EMPLEADO INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único del empleado',
+    ID_DOCUMENTO VARCHAR(13) NOT NULL UNIQUE COMMENT 'Número de documento único del empleado',
+    ID_TIPO_DOC VARCHAR(10) NOT NULL COMMENT 'Tipo de documento, FK hacia TIPO_DOCUMENTO (solo Cédula, RUC, Pasaporte)',
+    ID_SUCURSAL VARCHAR(10) NOT NULL COMMENT 'Sucursal a la que pertenece el empleado',
+    NOMBRES VARCHAR(300) NOT NULL COMMENT 'Nombres completos del empleado',
+    TELEFONO VARCHAR(100) COMMENT 'Teléfono de contacto',
+    EMAIL VARCHAR(100) COMMENT 'Correo electrónico del empleado',
+    DIRECCION VARCHAR(350) COMMENT 'Dirección física del empleado',
+    CARGO VARCHAR(100) COMMENT 'Cargo o puesto del empleado',
+    FECHA_CONTRATACION DATE NOT NULL COMMENT 'Fecha de contratación',
+    ESTADO CHAR(1) DEFAULT 'A' COMMENT 'Estado del empleado: A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test',
+    FECHA_CREACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha de creación del registro',
+    FECHA_MODIFICACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Fecha de última modificación',
+    CONSTRAINT chk_estado_empleado CHECK (ESTADO IN ('A','I','S','P','E','O','R','T')),
+    CONSTRAINT fk_empleado_tipo_doc FOREIGN KEY (ID_TIPO_DOC) REFERENCES TIPO_DOCUMENTO(ID_TIPO_DOC) ON DELETE RESTRICT,
+    CONSTRAINT fk_empleado_sucursal FOREIGN KEY (ID_SUCURSAL) REFERENCES SUCURSALES(ID_SUCURSAL) ON DELETE RESTRICT
+);
+
+-- =========================================
+-- TABLA: FORMA_PAGO_LEGAL
+-- Catálogo oficial de formas de pago según normativa del SRI
+-- =========================================
+DROP TABLE IF EXISTS FORMA_PAGO_LEGAL;
+CREATE TABLE FORMA_PAGO_LEGAL (
+    ID_FPL VARCHAR(10) PRIMARY KEY COMMENT 'Identificador único de la forma de pago legal',
+    NOMBRE_FPL VARCHAR(100) NOT NULL COMMENT 'Nombre oficial de la forma de pago según SRI',
+    DETALLE_FPL VARCHAR(255) COMMENT 'Descripción detallada de la forma de pago'
+);
+
+-- =========================================
+-- TABLA: FORMA_PAGO
+-- Catálogo interno de formas de pago, vinculado al catálogo oficial del SRI
+-- =========================================
+DROP TABLE IF EXISTS FORMA_PAGO;
+CREATE TABLE FORMA_PAGO (
+    ID_FORMA_PAGO VARCHAR(10) PRIMARY KEY COMMENT 'Identificador único de la forma de pago interna',
+    NOMBRE_FORMA_PAGO VARCHAR(100) NOT NULL COMMENT 'Nombre de la forma de pago utilizada en el sistema',
+    DETALLE_FORMA_PAGO VARCHAR(255) COMMENT 'Descripción detallada de la forma de pago',
+    ID_FPL VARCHAR(10) NOT NULL COMMENT 'Referencia a la forma de pago legal según SRI',
+    ESTADO CHAR(1) DEFAULT 'A' COMMENT 'Estado de la forma de pago: A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test',
+    FECHA_CREACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha de creación del registro',
+    FECHA_MODIFICACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Fecha de última modificación',
+    CONSTRAINT fk_forma_pago_legal FOREIGN KEY (ID_FPL) REFERENCES FORMA_PAGO_LEGAL(ID_FPL) ON DELETE RESTRICT,
+    CONSTRAINT chk_estado_forma_pago CHECK (ESTADO IN ('A','I','S','P','E','O','R','T'))
+);
+
+-- =========================================
+-- TABLA: PAGO
+-- Registro de pagos realizados por clientes
+-- =========================================
+DROP TABLE IF EXISTS PAGO;
+CREATE TABLE PAGO (
+    ID_PAGO INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único del pago',
+    ID_FORMA_PAGO VARCHAR(10) NOT NULL COMMENT 'Forma de pago utilizada, FK hacia FORMA_PAGO',
+    MONEDA VARCHAR(10) NOT NULL DEFAULT 'USD' COMMENT 'Moneda utilizada en el pago (ej. USD, EUR)',
+    MONTO DECIMAL(12,3) NOT NULL COMMENT 'Monto del pago',
+    FECHA_HORA TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora del pago',
+    REFERENCIA VARCHAR(100) COMMENT 'Referencia del pago (ej. número de transacción, cheque, código)',
+    ESTADO CHAR(1) DEFAULT 'C' COMMENT 'Estado del pago: A=Activo, I=Anulado, P=Pendiente, C=Confirmado',
+    FECHA_CREACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha de creación del registro',
+    FECHA_MODIFICACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Fecha de última modificación',
+    CONSTRAINT fk_pago_forma FOREIGN KEY (ID_FORMA_PAGO) REFERENCES FORMA_PAGO(ID_FORMA_PAGO) ON DELETE RESTRICT,
+    CONSTRAINT chk_moneda_pago CHECK (MONEDA IN ('USD')),
+    CONSTRAINT chk_estado_pago CHECK (ESTADO IN ('A','I','P','C'))
+);
+
+-- =========================================
+-- TABLA: IMPUESTO
+-- Catálogo de impuestos aplicables a las ventas
+-- =========================================
+DROP TABLE IF EXISTS IMPUESTO;
+CREATE TABLE IMPUESTO (
+    ID_TIPO_IMPUESTO VARCHAR(10) PRIMARY KEY COMMENT 'Identificador único del tipo de impuesto',
+    NOMBRE_TIPO_IMPUESTO VARCHAR(50) NOT NULL COMMENT 'Nombre del impuesto (IVA, ICE, etc.)',
+    DETALLE_IMPUESTO VARCHAR(200) COMMENT 'Descripción detallada del impuesto',
+    VALOR_IMPUESTO DECIMAL(5,3) NOT NULL COMMENT 'Porcentaje del impuesto con precisión de 3 decimales'
+);
+
+-- =========================================
+-- TABLA: VENTA
+-- Registro de ventas realizadas en sucursales
+-- =========================================
+DROP TABLE IF EXISTS VENTA;
+CREATE TABLE VENTA (
+    ID_VENTA INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único de la venta',
+    ID_SUCURSAL VARCHAR(10) NOT NULL COMMENT 'Sucursal donde se realiza la venta',
+    ID_CLIENTE INT NOT NULL COMMENT 'Cliente que realiza la compra',
+    ID_EMPLEADO INT NOT NULL COMMENT 'Empleado que registra la venta',
+    ID_PAGO INT NOT NULL COMMENT 'Pago asociado a la venta (solo uno permitido)',
+    ID_TIPO_IMPUESTO VARCHAR(10) NOT NULL COMMENT 'Tipo de impuesto aplicado (solo uno)',
+    FECHA_HORA TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora de la venta',
+    SUBTOTAL DECIMAL(12,3) NOT NULL COMMENT 'Subtotal antes de impuestos y descuentos',
+	VALOR_IMPUESTO DECIMAL(12,3) NOT NULL COMMENT 'Valor del impuesto aplicado al subtotal',
+    DESCUENTO DECIMAL(12,3) DEFAULT 0.00 COMMENT 'Descuento aplicado a la venta',
+    TOTAL DECIMAL(12,3) NOT NULL COMMENT 'Total calculado automáticamente',
+    ESTADO CHAR(1) DEFAULT 'C' COMMENT 'Estado de la venta: A=Activa, I=Anulada, P=Pendiente, C=Confirmada',
+    FECHA_CREACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha de creación del registro',
+    FECHA_MODIFICACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Fecha de última modificación',
+    CONSTRAINT fk_venta_cliente FOREIGN KEY (ID_CLIENTE) REFERENCES CLIENTE(ID_CLIENTE) ON DELETE RESTRICT,
+    CONSTRAINT fk_venta_empleado FOREIGN KEY (ID_EMPLEADO) REFERENCES EMPLEADO(ID_EMPLEADO) ON DELETE RESTRICT,
+    CONSTRAINT fk_venta_pago FOREIGN KEY (ID_PAGO) REFERENCES PAGO(ID_PAGO) ON DELETE RESTRICT,
+    CONSTRAINT fk_venta_impuesto FOREIGN KEY (ID_TIPO_IMPUESTO) REFERENCES IMPUESTO(ID_TIPO_IMPUESTO) ON DELETE RESTRICT,
+    CONSTRAINT chk_estado_venta CHECK (ESTADO IN ('A','I','P','C')),
+    CONSTRAINT unique_venta UNIQUE (ID_CLIENTE, ID_PAGO, TOTAL),
+    CONSTRAINT chk_descuento_venta CHECK (DESCUENTO <= SUBTOTAL)
+);
+-- ALTER TABLE ventas AUTO_INCREMENT = 11;
+-- ALTER TABLE VENTA ADD COLUMN VALOR_IMPUESTO DECIMAL(12,3) DEFAULT 0.000 COMMENT 'Valor del impuesto aplicado al subtotal';
+-- ALTER TABLE venta ADD CONSTRAINT chk_descuento_venta CHECK (DESCUENTO <= TOTAL);
+-- ALTER TABLE VENTA MODIFY SUBTOTAL DECIMAL(12,3);
+-- ALTER TABLE VENTA MODIFY DESCUENTO DECIMAL(12,3);
+-- ALTER TABLE VENTA ADD CONSTRAINT unique_venta UNIQUE (ID_CLIENTE, ID_PAGO, TOTAL);
+
+-- ==============================================
+-- TABLA: DETALLE_VENTA
+-- Detalle de productos por cada venta
+-- ==============================================
+DROP TABLE IF EXISTS DETALLE_VENTA;
+CREATE TABLE DETALLE_VENTA (
+    ID_DETALLE INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único del detalle',
+    ID_VENTA INT NOT NULL COMMENT 'Referencia a la venta',
+    ID_PRODUCTO VARCHAR(20) NOT NULL COMMENT 'Producto vendido',
+    PRECIO_UNITARIO DECIMAL(12,3) DEFAULT 0 NOT NULL COMMENT 'Precio unitario del producto',
+    CANTIDAD INT NOT NULL COMMENT 'Cantidad vendida',
+    DESCUENTO DECIMAL(12,3) DEFAULT 0.00 COMMENT 'Descuento aplicado al producto',
+    SUBTOTAL DECIMAL(12,3) GENERATED ALWAYS AS ((PRECIO_UNITARIO * CANTIDAD) - DESCUENTO) STORED COMMENT 'Subtotal calculado automáticamente',
+    FECHA_CREACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha de creación del registro',
+    CONSTRAINT fk_detalle_venta FOREIGN KEY (ID_VENTA) REFERENCES VENTA(ID_VENTA) ON DELETE CASCADE,
+    CONSTRAINT fk_detalle_producto FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID_PRODUCTO) ON DELETE RESTRICT,
+    CONSTRAINT chk_descuento_detalle CHECK (DESCUENTO <= (PRECIO_UNITARIO * CANTIDAD))
+);
+-- ALTER TABLE detalle_venta ADD CONSTRAINT chk_descuento_detalle CHECK (DESCUENTO <= (PRECIO_UNITARIO * CANTIDAD));
+
+-- =========================================
+-- TABLA: TRANSFERENCIA
+-- Movimientos de stock entre sucursales
+-- =========================================
+DROP TABLE IF EXISTS TRANSFERENCIA;
+CREATE TABLE TRANSFERENCIA (
+    ID_TRANSFERENCIA INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único de la transferencia',
+    ID_PRODUCTO VARCHAR(20) NOT NULL COMMENT 'Producto transferido',
+    SUC_ORIGEN VARCHAR(10) NOT NULL COMMENT 'Sucursal origen',
+    SUC_DESTINO VARCHAR(10) NOT NULL COMMENT 'Sucursal destino',
+    CANTIDAD INT NOT NULL COMMENT 'Cantidad transferida',
+    FECHA TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha de la transferencia',
+    CONSTRAINT fk_transferencia_producto FOREIGN KEY (ID_PRODUCTO) REFERENCES PRODUCTOS(ID_PRODUCTO) ON DELETE RESTRICT,
+    CONSTRAINT fk_transferencia_origen FOREIGN KEY (SUC_ORIGEN) REFERENCES SUCURSALES(ID_SUCURSAL) ON DELETE RESTRICT,
+    CONSTRAINT fk_transferencia_destino FOREIGN KEY (SUC_DESTINO) REFERENCES SUCURSALES(ID_SUCURSAL) ON DELETE RESTRICT
+);
+
+-- ============================================================
+-- TABLA: VENTA_PROMOCION
+-- Relación entre una venta y las promociones/combos aplicados
+-- ============================================================
+DROP TABLE IF EXISTS VENTA_PROMOCION;
+CREATE TABLE VENTA_PROMOCION (
+    ID_VENTA INT NOT NULL COMMENT 'Referencia a la venta',
+    ID_PROMO_COMBO VARCHAR(10) NOT NULL COMMENT 'Referencia a la promoción o combo aplicado',
+    DESCUENTO DECIMAL(12,3) NOT NULL COMMENT 'Descuento aplicado en la venta',
+    CONSTRAINT fk_vp_venta FOREIGN KEY (ID_VENTA) REFERENCES VENTA(ID_VENTA) ON DELETE CASCADE,
+    CONSTRAINT fk_vp_promocion FOREIGN KEY (ID_PROMO_COMBO) REFERENCES PROMOCIONES_COMBOS(ID_PROMO_COMBO) ON DELETE CASCADE,
+    PRIMARY KEY (ID_VENTA, ID_PROMO_COMBO)
+);
+
+-- ============================================
+-- TABLA: FACTURA
+-- Documentos fiscales asociados a las ventas
+-- ============================================
+DROP TABLE IF EXISTS FACTURA;
+CREATE TABLE FACTURA (
+    ID_FACTURA INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único de la factura',
+    ID_VENTA INT NOT NULL COMMENT 'Referencia a la venta',
+    NUMERO_FACTURA VARCHAR(30) NOT NULL UNIQUE COMMENT 'Número de factura único',
+    NUM_AUTORIZACION VARCHAR(300) NOT NULL COMMENT 'Número de autorización del SRI',
+    CLAVE_ACCESO VARCHAR(100) NOT NULL UNIQUE COMMENT 'Clave de acceso validada contra el SRI',
+    FECHA_EMISION DATE NOT NULL COMMENT 'Fecha de emisión de la factura',
+    ID_FORMA_PAGO VARCHAR(10) NOT NULL COMMENT 'Forma de pago utilizada',
+    SUBTOTAL15 DECIMAL(12,3) DEFAULT 0.00 COMMENT 'Subtotal con IVA 15%',
+    SUBTOTAL0 DECIMAL(12,3) DEFAULT 0.00 COMMENT 'Subtotal con IVA 0%',
+    SUBTOTAL_NO_IVA DECIMAL(12,3) DEFAULT 0.00 COMMENT 'Subtotal sin IVA',
+    SUBTOTAL_EXENTO_IVA DECIMAL(12,3) DEFAULT 0.00 COMMENT 'Subtotal exento de IVA',
+    SUBTOTAL_SIN_IMPUESTOS DECIMAL(12,3) DEFAULT 0.00 COMMENT 'Subtotal sin impuestos',
+    DESCUENTO DECIMAL(12,3) DEFAULT 0.00 COMMENT 'Descuento aplicado',
+    ICE DECIMAL(12,3) DEFAULT 0.00 COMMENT 'Impuesto ICE',
+    IVA DECIMAL(12,3) DEFAULT 0.00 COMMENT 'Impuesto IVA',
+    IRBPNR DECIMAL(12,3) DEFAULT 0.00 COMMENT 'Impuesto IRBPNR',
+    PROPINA DECIMAL(12,3) DEFAULT 0.00 COMMENT 'Propina',
+    TOTAL DECIMAL(12,3) NOT NULL COMMENT 'Total de la factura',
+    ESTADO CHAR(1) DEFAULT 'A' COMMENT 'Estado de la factura: A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test',
+    CONSTRAINT fk_factura_venta FOREIGN KEY (ID_VENTA) REFERENCES VENTA(ID_VENTA) ON DELETE CASCADE,
+    CONSTRAINT fk_factura_pago FOREIGN KEY (ID_FORMA_PAGO) REFERENCES FORMA_PAGO(ID_FORMA_PAGO),
+    CONSTRAINT fk_factura_estado CHECK (ESTADO IN ('A','I','S','P','E','O','R','T'))
+);
+
+-- =================================================
+-- TABLA: NOTA_VENTA
+-- Notas de venta físicas registradas en el sistema
+-- =================================================
+DROP TABLE IF EXISTS NOTA_VENTA;
+CREATE TABLE NOTA_VENTA (
+    ID_NOTA_VENTA INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único de la nota de venta',
+    ID_VENTA INT NOT NULL COMMENT 'Referencia a la venta',
+    NUMERO_NOTA_VENTA VARCHAR(30) NOT NULL UNIQUE COMMENT 'Número de nota de venta único',
+    NUM_AUTORIZACION VARCHAR(300) NOT NULL COMMENT 'Número de autorización de la nota de venta',
+    FECHA_EMISION DATE NOT NULL COMMENT 'Fecha de emisión de la nota de venta',
+    TOTAL DECIMAL(12,3) NOT NULL COMMENT 'Total de la nota de venta',
+    CONSTRAINT fk_nota_venta FOREIGN KEY (ID_VENTA) REFERENCES VENTA(ID_VENTA) ON DELETE CASCADE
+);
+
+-- PENDIENTE
+-- Por definir: trigger BEFORE INSERT que valide que el descuento aplicado en VENTA_PROMOCION no supere el valor máximo definido en la tabla PROMOCIONES_COMBOS
+
+-- =======================================================================================================================================================
+-- TABLAS DE APLICACION
+-- =======================================================================================================================================================
+-- =========================================
+-- TABLA: USUARIOS
+-- Usuarios del Sistema
+-- =========================================
+DROP TABLE IF EXISTS USUARIOS;
+CREATE TABLE USUARIOS (
+  USER_ID 				INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único del usuario',
+  ID_EMPLEADO			INT COMMENT 'Id del Empleado correspondiente',
+  NOMBRE				VARCHAR(100) NOT NULL COMMENT 'Nombre Completo de Usuario',
+  NOMBRE_USUARIO		VARCHAR(100) NOT NULL COMMENT 'Nombre de inicio de Sesion',
+  EMAIL 				VARCHAR(255) UNIQUE NOT NULL COMMENT 'Correo electrónico del usuario (único)',
+  TELEFONO 				VARCHAR(20) COMMENT 'Telefono de contacto',
+  PASSWORD_HASH 		VARCHAR(255) NOT NULL COMMENT 'Contraseña encriptada del usuario',
+  ESTADO 				CHAR(1) DEFAULT 'A' COMMENT 'Estado del empleado: A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test',
+  ULTIMO_LOGIN			DATETIME COMMENT 'Fecha y hora de ultimo ingreso al sistema',
+  FECHA_CREACION		DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora de creación del usuario',
+  FECHA_MODIFICACION	DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Fecha y hora de la última actualización',
+  CONSTRAINT fk_usuario_sucursal FOREIGN KEY (ID_SUCURSAL) REFERENCES SUCURSALES(ID_SUCURSAL) ON DELETE SET NULL,
+  CONSTRAINT fk_usuario_empleado FOREIGN KEY (ID_EMPLEADO) REFERENCES SUCURSALES(ID_EMPLEADO) ON DELETE SET NULL,
+  CONSTRAINT chk_estado_usuario CHECK (ESTADO IN ('A','I','S','P','E','O','R','T'))
+);
+
+-- =========================================
+-- TABLA: ROLES
+-- Roles de la Aplicación
+-- =========================================
+DROP TABLE IF EXISTS ROLES;
+CREATE TABLE ROLES (
+  ROL_ID       INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único del rol',
+  NOMBRE       VARCHAR(50) UNIQUE NOT NULL COMMENT 'Nombre del rol (ej. admin_matriz, admin_sucursal, empleado)',
+  DESCRIPCION  VARCHAR(255) COMMENT 'Descripción detallada de las funciones y permisos asociados al rol'
+);
+
+-- =========================================
+-- TABLA: PERMISOS
+-- Permisos de la Aplicación
+-- =========================================
+DROP TABLE IF EXISTS PERMISOS;
+CREATE TABLE PERMISOS (
+  PERMISO_ID	VARCHAR(50) PRIMARY KEY COMMENT 'Código único del permiso (ej. VENTAS_CREAR)',
+  MODULO       	VARCHAR(50) NOT NULL COMMENT 'Módulo o área del sistema al que pertenece el permiso',
+  DESCRIPCION  	VARCHAR(255) NOT NULL COMMENT 'Descripción detallada de la acción que habilita el permiso'
+);
+
+-- =========================================
+-- TABLA: ROL_PERMISO
+-- Permisos asignados a cada rol
+-- =========================================
+DROP TABLE IF EXISTS ROL_PERMISO;
+CREATE TABLE ROL_PERMISO (
+  RP_ID           	INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único de la relación rol-permiso',
+  ROL_ID          	INT NOT NULL COMMENT 'Identificador del rol',
+  PERMISO_ID  		VARCHAR(50) NOT NULL COMMENT 'Código del permiso asignado al rol',
+  UNIQUE (ROL_ID, PERMISO_ID),
+  CONSTRAINT fk_rol_permiso_roles FOREIGN KEY (ROL_ID) REFERENCES ROLES(ROL_ID) ON DELETE CASCADE,
+  CONSTRAINT fk_rol_permiso_permisos FOREIGN KEY (PERMISO_ID) REFERENCES PERMISOS(PERMISO_ID) ON DELETE CASCADE
+);
+
+-- =========================================
+-- TABLA: USUARIO_ROL
+-- Relación entre usuarios y roles del sistema
+-- =========================================
+DROP TABLE IF EXISTS USUARIO_ROL;
+CREATE TABLE USUARIO_ROL (
+  ID_UR             INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único de la relación usuario-rol',
+  USER_ID           INT NOT NULL COMMENT 'Identificador del usuario (FK hacia USUARIOS.USER_ID)',
+  ROL_ID            INT NOT NULL COMMENT 'Identificador del rol asignado al usuario (FK hacia ROLES.ROL_ID)',
+  FECHA_CREACION    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora en que se asignó el rol al usuario',
+  UNIQUE (USER_ID, ROL_ID) COMMENT 'Evita que un mismo usuario tenga asignado el mismo rol más de una vez',
+  CONSTRAINT fk_usuario_rol_usuarios FOREIGN KEY (USER_ID) REFERENCES USUARIOS(USER_ID) ON DELETE CASCADE ,
+  CONSTRAINT fk_usuario_rol_roles FOREIGN KEY (ROL_ID) REFERENCES ROLES(ROL_ID) ON DELETE CASCADE
+);
+
+-- =========================================
+-- TABLA: cash_registers
+-- Tabla de App caja registradora
+-- =========================================
+DROP TABLE IF EXISTS cash_registers;
+CREATE TABLE cash_registers (
+  id CHAR(36) PRIMARY KEY,
+  branch_id VARCHAR(10) NOT NULL,
+  code VARCHAR(50) NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE (branch_id, code),
+  FOREIGN KEY (branch_id) REFERENCES SUCURSALES(ID_SUCURSAL) ON DELETE CASCADE
+);
+
+-- =========================================
+-- TABLA: cash_sessions
+-- Tabla de App sesiones de caja
+-- =========================================
+DROP TABLE IF EXISTS cash_sessions;
+CREATE TABLE cash_sessions (
+  id CHAR(36) PRIMARY KEY,
+  cash_register_id CHAR(36) NOT NULL,
+  user_id INT,
+  user_name VARCHAR(100),
+  opened_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  opening_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  closed_at TIMESTAMP,
+  expected_amount DECIMAL(12,2),
+  declared_amount DECIMAL(12,2),
+  difference DECIMAL(12,2),
+  status ENUM('abierta','cerrada') NOT NULL DEFAULT 'abierta',
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (cash_register_id) REFERENCES cash_registers(id),
+  FOREIGN KEY (user_id) REFERENCES EMPLEADO(ID_EMPLEADO)
+);
+
+-- =========================================
+-- TABLA: cash_movements
+-- Tabla de App movimientos de caja
+-- =========================================
+DROP TABLE IF EXISTS cash_movements;
+CREATE TABLE cash_movements (
+  id CHAR(36) PRIMARY KEY,
+  cash_session_id CHAR(36) NOT NULL,
+  type ENUM('venta','ingreso','egreso','retiro','devolucion','apertura') NOT NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  concept TEXT NOT NULL,
+  reference TEXT,
+  user_id INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (cash_session_id) REFERENCES cash_sessions(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES EMPLEADO(ID_EMPLEADO)
+);
+
+-- =========================================
+-- TABLA: document_numbers
+-- Tabla de App Numeros de Documento estandarizados
+-- =========================================
+DROP TABLE IF EXISTS document_numbers;
+CREATE TABLE document_numbers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  doc_type VARCHAR(20) NOT NULL,
+  series VARCHAR(20) NOT NULL,
+  current_number INT NOT NULL DEFAULT 0,
+  UNIQUE (doc_type, series)
+);
+
+-- ================================================================
+-- TRIGGER AUDIT: trg_audit_productos - UPDATE PRODUCTO
+-- Auditoria Update productos
+-- =================================================================
+DROP TRIGGER trg_audit_productos;
+DELIMITER $$
+CREATE TRIGGER trg_audit_productos
+AFTER UPDATE ON PRODUCTOS
+FOR EACH ROW
+BEGIN
+    DECLARE usuario VARCHAR(100);
+    SET usuario = CURRENT_USER();
+    -- Auditar NOMBRE_PRODUCTO
+    IF OLD.NOMBRE_PRODUCTO <> NEW.NOMBRE_PRODUCTO THEN
+        INSERT INTO AUDITORIA_UPDATE (NOMBRE_TABLA, CLAVE_PRIMARIA, CAMPO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO)
+        VALUES ('PRODUCTOS', OLD.ID_PRODUCTO, 'NOMBRE_PRODUCTO', OLD.NOMBRE_PRODUCTO, NEW.NOMBRE_PRODUCTO, usuario);
+    END IF;
+    -- Auditar PVP
+    IF OLD.PVP <> NEW.PVP THEN
+        INSERT INTO AUDITORIA_UPDATE (NOMBRE_TABLA, CLAVE_PRIMARIA, CAMPO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO)
+        VALUES ('PRODUCTOS', OLD.ID_PRODUCTO, 'PVP', OLD.PVP, NEW.PVP, usuario);
+    END IF;
+    -- Auditar Estado
+    IF OLD.ESTADO <> NEW.ESTADO THEN
+        INSERT INTO AUDITORIA_UPDATE (NOMBRE_TABLA, CLAVE_PRIMARIA, CAMPO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO)
+        VALUES ('PRODUCTOS', OLD.ID_PRODUCTO, 'ESTADO', OLD.ESTADO, NEW.ESTADO, usuario);
+    END IF;
+END$$
+DELIMITER ;
+
+-- ================================================================
+-- TRIGGER AUDIT: trg_insert_producto_sucursales - INSERT PRODUCTO
+-- Replicacion en demas sucursales - Solo se puede insertar en Sucursal Matriz
+-- =================================================================
+DROP TRIGGER IF EXISTS trg_insert_producto_sucursales;
+DELIMITER $$
+CREATE TRIGGER trg_insert_producto_sucursales
+AFTER INSERT ON PRODUCTOS
+FOR EACH ROW
+BEGIN
+    INSERT INTO PRODUCTOS_SUCURSAL (ID_PRODUCTO, ID_SUCURSAL, CANTIDAD)
+    SELECT NEW.ID_PRODUCTO, s.ID_SUCURSAL, 0
+    FROM SUCURSALES s;
+END$$
+DELIMITER ;
+
+-- ================================================================
+-- TRIGGER: trg_validar_cliente - INSERT CLIENTE
+-- Verificaciones de ID_DOCUMENTO
+-- =================================================================
+DROP TRIGGER IF EXISTS trg_validar_cliente;
+DELIMITER $$
+CREATE TRIGGER trg_validar_cliente
+BEFORE INSERT ON CLIENTE
+FOR EACH ROW
+BEGIN
+    DECLARE v_funcion VARCHAR(50);
+    -- Obtener la función de validación asociada al tipo de documento
+    SELECT FUNCION_VALIDACION INTO v_funcion
+    FROM TIPO_DOCUMENTO
+    WHERE ID_TIPO_DOC = NEW.ID_TIPO_DOC;
+
+    -- Validación de documento según tipo
+    IF v_funcion = 'fn_validar_cedula' AND fn_validar_cedula(NEW.ID_DOCUMENTO) = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Cédula inválida';
+    END IF;
+
+    IF v_funcion = 'fn_validar_ruc' AND fn_validar_ruc(NEW.ID_DOCUMENTO) = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'RUC inválido';
+    END IF;
+
+    IF v_funcion = 'fn_validar_pasaporte' AND fn_validar_pasaporte(NEW.ID_DOCUMENTO) = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Pasaporte inválido';
+    END IF;
+
+    /*IF v_funcion = 'fn_validar_placa' AND fn_validar_placa(NEW.ID_DOCUMENTO) = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Placa inválida';
+    END IF;*/ -- Definido pero No Aplica al momento
+
+    IF v_funcion = 'fn_validar_consumidor_final' AND fn_validar_consumidor_final(NEW.ID_DOCUMENTO) = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Documento consumidor final inválido';
+    END IF;
+
+    -- Validación de correo electrónico (si no es nulo)
+    IF NEW.EMAIL IS NOT NULL AND fn_validar_email(NEW.EMAIL) = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Correo electrónico inválido';
+    END IF;
+END$$
+DELIMITER ;
+
+-- ==============================================================
+-- TRIGGER: trg_validar_empleado - INSERT EMPLEADO
+-- Verificacion de ID_DOCUMENTO
+-- ===============================================================
+DROP TRIGGER IF EXISTS trg_validar_empleado;
+DELIMITER $$
+CREATE TRIGGER trg_validar_empleado
+BEFORE INSERT ON EMPLEADO
+FOR EACH ROW
+BEGIN
+    DECLARE v_funcion VARCHAR(50);
+
+    -- Validar que el tipo de documento sea solo CÉDULA, RUC o PASAPORTE
+    IF NEW.ID_TIPO_DOC NOT IN ('TIP_DOC01','TIP_DOC02','TIP_DOC03') THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Tipo de documento inválido para empleado';
+    END IF;
+
+    -- Obtener la función de validación asociada al tipo de documento
+    SELECT FUNCION_VALIDACION INTO v_funcion
+    FROM TIPO_DOCUMENTO
+    WHERE ID_TIPO_DOC = NEW.ID_TIPO_DOC;
+
+    -- Validación de documento según tipo
+    IF v_funcion = 'fn_validar_cedula' AND fn_validar_cedula(NEW.ID_DOCUMENTO) = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Cédula inválida';
+    END IF;
+
+    IF v_funcion = 'fn_validar_ruc' AND fn_validar_ruc(NEW.ID_DOCUMENTO) = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'RUC inválido';
+    END IF;
+
+    IF v_funcion = 'fn_validar_pasaporte' AND fn_validar_pasaporte(NEW.ID_DOCUMENTO) = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Pasaporte inválido';
+    END IF;
+
+    -- Validación de correo electrónico (si no es nulo)
+    IF NEW.EMAIL IS NOT NULL AND fn_validar_email(NEW.EMAIL) = 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Correo electrónico inválido';
+    END IF;
+END$$
+DELIMITER ;
+
+-- =========================================
+-- TRIGGER: trg_calcular_total_venta - INSERT VENTA
+-- Calcula Total de la Venta
+-- No Usado - a traves del frontend
+-- =========================================
+DROP TRIGGER IF EXISTS trg_calcular_total_venta;
+DELIMITER $$
+CREATE TRIGGER trg_calcular_total_venta
+BEFORE INSERT ON VENTA
+FOR EACH ROW
+BEGIN
+    DECLARE v_valor_impuesto DECIMAL(5,2);
+
+    -- Obtener porcentaje del impuesto desde la tabla IMPUESTO
+    SELECT VALOR_IMPUESTO INTO v_valor_impuesto
+    FROM IMPUESTO
+    WHERE ID_TIPO_IMPUESTO = NEW.ID_TIPO_IMPUESTO;
+
+    -- Validar que exista el tipo de impuesto
+    IF v_valor_impuesto IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Tipo de impuesto inválido o no registrado en catálogo IMPUESTO';
+    END IF;
+
+    -- Calcular el TOTAL
+    -- SET NEW.TOTAL = (NEW.SUBTOTAL - NEW.DESCUENTO) + (NEW.SUBTOTAL - NEW.DESCUENTO) * (v_valor_impuesto / 100);
+END$$
+DELIMITER ;
+
+-- ==========================================================
+-- TRIGGER: trg_insert_venta - INSERT VENTA
+-- Valida que no se ingresen ventas con fechas futuras al dia actual
+-- =========================================================
+DROP TRIGGER IF EXISTS trg_insert_venta;
+DELIMITER $$
+CREATE TRIGGER trg_insert_venta
+BEFORE INSERT ON VENTA
+FOR EACH ROW
+BEGIN
+    DECLARE v_msg VARCHAR(255);
+    -- Validar que la fecha de la venta no sea futura
+    IF NEW.FECHA_HORA > CURDATE() THEN
+        SET v_msg = CONCAT('Error: No se permiten ventas futuras. ','Fecha ingresada: ', NEW.FECHA_HORA,', fecha actual: ', CURDATE());
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = v_msg;
+    END IF;
+END$$
+DELIMITER ;
+
+-- ==========================================================
+-- TRIGGER: trg_validar_transferencia - INSERT TRANSFERENCIA
+-- Valida movimientos de stock entre sucursales
+-- =========================================================
+DROP TRIGGER IF EXISTS trg_validar_transferencia;
+DELIMITER $$
+CREATE TRIGGER trg_validar_transferencia
+BEFORE INSERT ON TRANSFERENCIA
+FOR EACH ROW
+BEGIN
+    DECLARE v_stock_actual INT;
+    -- Obtener stock actual del producto en la sucursal origen
+    SELECT CANTIDAD INTO v_stock_actual
+    FROM PRODUCTOS_SUCURSAL
+    WHERE ID_PRODUCTO = NEW.ID_PRODUCTO
+      AND ID_SUCURSAL = NEW.SUC_ORIGEN;
+
+    -- Validar existencia de stock
+    IF v_stock_actual IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El producto no existe en la sucursal origen';
+    END IF;
+
+    -- Validar cantidad suficiente
+    IF v_stock_actual < NEW.CANTIDAD THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Stock insuficiente en la sucursal origen';
+    END IF;
+
+    -- Si pasa la validación, se descuenta stock en origen y se suma en destino
+    UPDATE PRODUCTOS_SUCURSAL
+    SET CANTIDAD = CANTIDAD - NEW.CANTIDAD
+    WHERE ID_PRODUCTO = NEW.ID_PRODUCTO
+      AND ID_SUCURSAL = NEW.SUC_ORIGEN;
+
+    UPDATE PRODUCTOS_SUCURSAL
+    SET CANTIDAD = CANTIDAD + NEW.CANTIDAD
+    WHERE ID_PRODUCTO = NEW.ID_PRODUCTO
+      AND ID_SUCURSAL = NEW.SUC_DESTINO;
+END$$
+DELIMITER ;
+
+-- =============================================
+-- TRIGGER: trg_insert_detalle_venta
+-- Inserción en DETALLE_VENTA
+-- Coloca precio producto, valida stock y descuenta
+-- =============================================
+DROP TRIGGER IF EXISTS trg_insert_detalle_venta;
+DELIMITER $$
+CREATE TRIGGER trg_insert_detalle_venta
+BEFORE INSERT ON DETALLE_VENTA
+FOR EACH ROW
+BEGIN
+    DECLARE v_precio DECIMAL(10,3);
+    DECLARE v_stock_actual INT;
+    DECLARE v_id_sucursal VARCHAR(10);
+    DECLARE v_msg VARCHAR(255);
+
+    -- 1. Obtener el precio del producto desde PRODUCTOS
+    SELECT PVP INTO v_precio
+    FROM PRODUCTOS
+    WHERE ID_PRODUCTO = NEW.ID_PRODUCTO;
+
+    IF v_precio IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: Producto no existe en catálogo';
+    END IF;
+
+    -- Asignar precio unitario automáticamente
+    SET NEW.PRECIO_UNITARIO = v_precio;
+    
+    -- 2. Obtener la sucursal de la venta
+    SELECT ID_SUCURSAL INTO v_id_sucursal
+    FROM VENTA
+    WHERE ID_VENTA = NEW.ID_VENTA;
+
+    IF v_id_sucursal IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: Venta no asociada a ninguna sucursal';
+    END IF;
+
+    -- 3. Validar stock en PRODUCTOS_SUCURSAL
+    SELECT CANTIDAD INTO v_stock_actual
+    FROM PRODUCTOS_SUCURSAL
+    WHERE ID_PRODUCTO = NEW.ID_PRODUCTO
+      AND ID_SUCURSAL = v_id_sucursal;
+
+    IF v_stock_actual IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: Producto no registrado en la sucursal';
+    END IF;
+	
+    -- DESACTIVAR PARA PRUEBAS
+    IF v_stock_actual < NEW.CANTIDAD THEN
+        SET v_msg = CONCAT('Error: Stock insuficiente en la sucursal. Disponible: ', v_stock_actual, ', solicitado: ', NEW.CANTIDAD);
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = v_msg;
+    END IF;
+
+    -- 4. Descontar stock de la sucursal
+    UPDATE PRODUCTOS_SUCURSAL
+    SET CANTIDAD = CANTIDAD - NEW.CANTIDAD
+    WHERE ID_PRODUCTO = NEW.ID_PRODUCTO
+      AND ID_SUCURSAL = v_id_sucursal;
+    
+    -- 5. SUBTOTAL se calcula automáticamente en la definición de la tabla
+    -- (PRECIO_UNITARIO * CANTIDAD - DESCUENTO)
+END$$
+DELIMITER ;
+
+-- =============================================
+-- TRIGGER: trg_pago_conf_update_venta UPDATE PAGO
+-- Calcula Totales y Actualiza en tabla Ventas cuando el pago pasa a Confirmado
+-- ==============================================
+/*DROP TRIGGER IF EXISTS trg_pago_conf_update_venta;
+DELIMITER $$
+CREATE TRIGGER trg_pago_conf_update_venta
+AFTER UPDATE ON PAGO
+FOR EACH ROW
+BEGIN
+    DECLARE v_total_venta DECIMAL(12,2);
+    DECLARE v_subtotal DECIMAL(12,2);
+    DECLARE v_valor_impuesto DECIMAL(12,3);
+    DECLARE v_porcentaje_impuesto DECIMAL(5,2);
+
+    -- Solo actuar si el estado cambia a Confirmado
+    IF NEW.ESTADO = 'C' AND OLD.ESTADO <> 'C' THEN
+
+        -- Calcular el total de la venta desde DETALLE_VENTA
+        SELECT SUM(SUBTOTAL) INTO v_total_venta
+        FROM DETALLE_VENTA
+        WHERE ID_VENTA = (SELECT ID_VENTA FROM VENTA WHERE ID_PAGO = NEW.ID_PAGO);
+
+        -- Obtener porcentaje de impuesto desde tabla IMPUESTO
+        SELECT VALOR_IMPUESTO INTO v_porcentaje_impuesto
+        FROM IMPUESTO
+        WHERE ID_TIPO_IMPUESTO = (SELECT ID_TIPO_IMPUESTO FROM VENTA WHERE ID_PAGO = NEW.ID_PAGO);
+
+        -- Calcular subtotal sin impuesto
+        SET v_subtotal = v_total_venta / (1 + (v_porcentaje_impuesto/100));
+
+        -- Calcular valor del impuesto
+        SET v_valor_impuesto = v_total_venta - v_subtotal;
+
+        -- Actualizar la tabla VENTA
+        UPDATE VENTA
+        SET SUBTOTAL = v_subtotal,
+            VALOR_IMPUESTO = v_valor_impuesto,
+            TOTAL = v_total_venta
+        WHERE ID_PAGO = NEW.ID_PAGO;
+    END IF;
+END$$
+DELIMITER ;
+*/
+
+-- =============================================
+-- TRIGGER: trg_pago_insert_conf_update_venta INSERT PAGO
+-- Calcula Totales y Actualiza en tabla Ventas al insertar un nuevo pago en Estado confirmado
+-- ==============================================
+/*DROP TRIGGER IF EXISTS trg_pago_insert_conf_update_venta;
+DELIMITER $$
+CREATE TRIGGER trg_pago_insert_conf_update_venta
+AFTER INSERT ON PAGO
+FOR EACH ROW
+BEGIN
+    DECLARE v_total_venta DECIMAL(12,3);
+    DECLARE v_subtotal DECIMAL(12,3);
+    DECLARE v_valor_impuesto DECIMAL(12,3);
+    DECLARE v_porcentaje_impuesto DECIMAL(5,3);
+    DECLARE v_id_venta INT;
+
+    -- Solo actuar si el pago se inserta con estado Confirmado
+    IF NEW.ESTADO = 'C' THEN
+
+        -- Obtener la venta asociada al pago
+        SELECT ID_VENTA INTO v_id_venta
+        FROM VENTA
+        WHERE ID_PAGO = NEW.ID_PAGO;
+
+        IF v_id_venta IS NOT NULL THEN
+            -- Calcular el total de la venta desde DETALLE_VENTA
+            SELECT SUM(SUBTOTAL) INTO v_total_venta
+            FROM DETALLE_VENTA
+            WHERE ID_VENTA = v_id_venta;
+
+            -- Obtener porcentaje de impuesto desde tabla IMPUESTO
+            SELECT VALOR_IMPUESTO INTO v_porcentaje_impuesto
+            FROM IMPUESTO
+            WHERE ID_TIPO_IMPUESTO = (SELECT ID_TIPO_IMPUESTO FROM VENTA WHERE ID_VENTA = v_id_venta);
+
+            -- Calcular subtotal sin impuesto
+            SET v_subtotal = v_total_venta / (1 + (v_porcentaje_impuesto/100));
+
+            -- Calcular valor del impuesto
+            SET v_valor_impuesto = v_total_venta - v_subtotal;
+
+            -- Actualizar la tabla VENTA
+            UPDATE VENTA
+            SET SUBTOTAL = v_subtotal,
+                VALOR_IMPUESTO = v_valor_impuesto,
+                TOTAL = v_total_venta
+            WHERE ID_VENTA = v_id_venta;
+        END IF;
+    END IF;
+END$$
+DELIMITER ;
+*/
+-- ================================================================
+-- TRIGGER AUDIT: trg_auditoria_delete_producto - DELETE PRODUCTO
+-- Auditoria delete productos
+-- =================================================================
+DROP TRIGGER IF EXISTS trg_auditoria_delete_producto;
+DELIMITER $$
+CREATE TRIGGER trg_auditoria_delete_producto
+BEFORE DELETE ON PRODUCTOS
+FOR EACH ROW
+BEGIN
+	-- Eliminar registros relacionados en PRODUCTOS_SUCURSAL - No necesario ya que la FK esta configurada con ON DELETE CASCADE
+    -- DELETE FROM PRODUCTOS_SUCURSAL WHERE ID_PRODUCTO = OLD.ID_PRODUCTO;
+    -- Registrar en tabla de auditoría de eliminaciones
+	INSERT INTO AUDITORIA_DELETE (NOMBRE_TABLA,CLAVE_PRIMARIA,VALORES_OLD,USUARIO)
+    VALUES ('PRODUCTOS',OLD.ID_PRODUCTO,
+		CONCAT(
+            'ID_PRODUCTO=', OLD.ID_PRODUCTO, ', ',
+            'NOMBRE_PRODUCTO=', OLD.NOMBRE_PRODUCTO, ', ',
+            'PVP=', OLD.PVP, ', ',
+            'DESCRIPCION=', OLD.DESCRIPCION, ', ',
+            'ID_SUBCATEGORIA=', OLD.ID_SUBCATEGORIA),
+        USER());
+END$$
+DELIMITER ;
+
+-- ================================================================
+-- TRIGGER AUDIT: trg_factura_delete - DELETE FACTURA
+-- Verificaciones de ID_DOCUMENTO antes de Insert en tabla CLIENTE
+-- =================================================================
+DROP TRIGGER IF EXISTS trg_factura_delete;
+DELIMITER $$
+CREATE TRIGGER trg_factura_delete
+BEFORE DELETE ON FACTURA
+FOR EACH ROW
+BEGIN
+    INSERT INTO AUDITORIA_DELETE (NOMBRE_TABLA,CLAVE_PRIMARIA,VALORES_OLD,USUARIO)
+    VALUES ('FACTURA',OLD.ID_FACTURA,
+        CONCAT('ID_FACTURA=', OLD.ID_FACTURA, ', ',
+			'NUMERO_FACTURA=', OLD.NUMERO_FACTURA, ', ',
+            'CLAVE_ACCESO=', OLD.CLAVE_ACCESO, ', ',
+            'TOTAL=', OLD.TOTAL),
+        USER());
+END$$
+DELIMITER ;
+
+-- =============================================
+-- TRIGGER AUDIT: trg_nota_venta_delete - DELETE NOTA_VENTA
+-- Registro auditoria delete tabla NOTA_VENTA
+-- ==============================================
+DROP TRIGGER IF EXISTS trg_nota_venta_delete;
+DELIMITER $$
+CREATE TRIGGER trg_nota_venta_delete
+BEFORE DELETE ON NOTA_VENTA
+FOR EACH ROW
+BEGIN
+    INSERT INTO AUDITORIA_DELETE (NOMBRE_TABLA, CLAVE_PRIMARIA, VALORES_OLD,USUARIO)
+    VALUES (
+        'NOTA_VENTA',
+        OLD.ID_NOTA_VENTA,
+        CONCAT(
+            'ID_NOTA_VENTA=', OLD.ID_NOTA_VENTA, ', ',
+            'ID_VENTA=', OLD.ID_VENTA, ', ',
+            'NUMERO_NOTA_VENTA=', OLD.NUMERO_NOTA_VENTA, ', ',
+            'TOTAL=', OLD.TOTAL
+        ),
+        USER());
+END$$
+DELIMITER ;
+
+-- =======================================================================================================================================================
+-- FUNCIONES
+-- =======================================================================================================================================================
+-- ==============================================
+-- FUNCION: fn_validar_pasaporte
+-- Verificacion Pasaporte
+-- ==============================================
+DROP FUNCTION IF EXISTS fn_validar_pasaporte;
+DELIMITER $$
+CREATE FUNCTION fn_validar_pasaporte(p_pasaporte VARCHAR(9))
+RETURNS TINYINT
+DETERMINISTIC
+BEGIN
+    DECLARE longitudPasaporte INT;
+
+    -- Normalizar: eliminar espacios y convertir a mayúsculas
+    SET p_pasaporte = UPPER(TRIM(p_pasaporte));
+    SET longitudPasaporte = LENGTH(p_pasaporte);
+
+    -- Validar longitud exacta
+    IF longitudPasaporte <> 9 THEN
+        RETURN 0;
+    END IF;
+
+    -- Validar formato: 3 letras + 6 números
+    IF p_pasaporte REGEXP '^[A-Z]{3}[0-9]{6}$' THEN
+        RETURN 1; -- Válido
+    ELSE
+        RETURN 0; -- Inválido
+    END IF;
+END$$
+DELIMITER ;
+
+-- ==============================================
+-- FUNCION: fn_validar_consumidor_final
+-- Verificacion Consumidor final
+-- ==============================================
+DROP FUNCTION IF EXISTS fn_validar_consumidor_final;
+DELIMITER $$
+CREATE FUNCTION fn_validar_consumidor_final(p_documento VARCHAR(13))
+RETURNS TINYINT
+DETERMINISTIC
+BEGIN
+    -- Validar longitud exacta de 13 dígitos
+    IF LENGTH(p_documento) <> 13 THEN
+        RETURN 0;
+    END IF;
+
+    -- Validar que todos los caracteres sean '9'
+    IF p_documento REGEXP '^[9]{13}$' THEN
+        RETURN 1; -- Válido
+    ELSE
+        RETURN 0; -- Inválido
+    END IF;
+END$$
+DELIMITER ;
+
+-- ==============================================
+-- FUNCION: fn_validar_ruc
+-- Verificacion RUC valido Modulo 10 y Modulo 11
+-- ==============================================
+DROP FUNCTION IF EXISTS fn_validar_ruc;
+DELIMITER $$
+CREATE FUNCTION fn_validar_ruc(p_ruc VARCHAR(13))
+RETURNS TINYINT
+DETERMINISTIC
+BEGIN
+    DECLARE provincia INT;
+    DECLARE tercerDigito INT;
+    DECLARE establecimiento VARCHAR(4);
+    DECLARE suma INT DEFAULT 0;
+    DECLARE digito INT;
+    DECLARE verificadorReal INT;
+    DECLARE verificadorCalculado INT;
+    DECLARE residuo INT;
+    DECLARE i INT;
+
+    -- Validar longitud exacta de 13 dígitos
+    IF p_ruc REGEXP '^[0-9]{13}$' = 0 THEN
+        RETURN 0;
+    END IF;
+
+    -- Provincia
+    SET provincia = CAST(SUBSTRING(p_ruc,1,2) AS UNSIGNED);
+    IF (provincia < 1 OR provincia > 24) AND provincia <> 30 THEN
+        RETURN 0;
+    END IF;
+
+    -- Tercer dígito
+    SET tercerDigito = CAST(SUBSTRING(p_ruc,3,1) AS UNSIGNED);
+
+    -- CASO A: Persona Natural (0–5)
+    IF tercerDigito BETWEEN 0 AND 5 THEN
+        SET establecimiento = SUBSTRING(p_ruc,11,3);
+        IF establecimiento = '000' THEN
+            RETURN 0;
+        END IF;
+
+        SET suma = 0;
+        SET i = 1;
+        WHILE i <= 9 DO
+            SET digito = CAST(SUBSTRING(p_ruc,i,1) AS UNSIGNED);
+            IF MOD(i,2)=1 THEN
+                SET digito = digito * 2;
+                IF digito >= 10 THEN SET digito = digito - 9; END IF;
+            END IF;
+            SET suma = suma + digito;
+            SET i = i + 1;
+        END WHILE;
+
+        SET verificadorReal = CAST(SUBSTRING(p_ruc,10,1) AS UNSIGNED);
+        SET verificadorCalculado = (10 - (suma MOD 10)) MOD 10;
+
+        RETURN IF(verificadorCalculado = verificadorReal, 1, 0);
+    END IF;
+
+    -- CASO B: Sociedad Privada / Extranjeros (9)
+    IF tercerDigito = 9 THEN
+        SET establecimiento = SUBSTRING(p_ruc,11,3);
+        IF establecimiento = '000' THEN
+            RETURN 0;
+        END IF;
+
+        SET suma = 0;
+        SET i = 1;
+        WHILE i <= 9 DO
+            SET digito = CAST(SUBSTRING(p_ruc,i,1) AS UNSIGNED);
+            CASE i
+                WHEN 1 THEN SET suma = suma + digito*4;
+                WHEN 2 THEN SET suma = suma + digito*3;
+                WHEN 3 THEN SET suma = suma + digito*2;
+                WHEN 4 THEN SET suma = suma + digito*7;
+                WHEN 5 THEN SET suma = suma + digito*6;
+                WHEN 6 THEN SET suma = suma + digito*5;
+                WHEN 7 THEN SET suma = suma + digito*4;
+                WHEN 8 THEN SET suma = suma + digito*3;
+                WHEN 9 THEN SET suma = suma + digito*2;
+            END CASE;
+            SET i = i + 1;
+        END WHILE;
+
+        SET verificadorReal = CAST(SUBSTRING(p_ruc,10,1) AS UNSIGNED);
+        SET residuo = suma MOD 11;
+        SET verificadorCalculado = IF(residuo=0,0,11-residuo);
+
+        RETURN IF(verificadorCalculado = verificadorReal, 1, 0);
+    END IF;
+
+    -- CASO C: Instituciones Públicas (6)
+    IF tercerDigito = 6 THEN
+        SET establecimiento = SUBSTRING(p_ruc,10,4);
+        IF establecimiento = '0000' THEN
+            RETURN 0;
+        END IF;
+
+        SET suma = 0;
+        SET i = 1;
+        WHILE i <= 8 DO
+            SET digito = CAST(SUBSTRING(p_ruc,i,1) AS UNSIGNED);
+            CASE i
+                WHEN 1 THEN SET suma = suma + digito*3;
+                WHEN 2 THEN SET suma = suma + digito*2;
+                WHEN 3 THEN SET suma = suma + digito*7;
+                WHEN 4 THEN SET suma = suma + digito*6;
+                WHEN 5 THEN SET suma = suma + digito*5;
+                WHEN 6 THEN SET suma = suma + digito*4;
+                WHEN 7 THEN SET suma = suma + digito*3;
+                WHEN 8 THEN SET suma = suma + digito*2;
+            END CASE;
+            SET i = i + 1;
+        END WHILE;
+
+        SET verificadorReal = CAST(SUBSTRING(p_ruc,9,1) AS UNSIGNED);
+        SET residuo = suma MOD 11;
+        SET verificadorCalculado = IF(residuo=0,0,11-residuo);
+
+        RETURN IF(verificadorCalculado = verificadorReal, 1, 0);
+    END IF;
+
+    -- Si no cumple ningún caso válido
+    RETURN 0;
+END$$
+DELIMITER ;
+
+-- =========================================
+-- FUNCION: fn_validar_email
+-- Verificacion Mail valido
+-- =========================================
+DROP FUNCTION IF EXISTS fn_validar_email;
+DELIMITER $$
+CREATE FUNCTION fn_validar_email(p_email VARCHAR(255))
+RETURNS TINYINT
+DETERMINISTIC
+BEGIN
+    DECLARE resultado TINYINT DEFAULT 0;
+    -- Validación básica con expresión regular - Formato: texto@texto.dominio
+    IF p_email REGEXP '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$' THEN
+        SET resultado = 1;
+    END IF;
+    RETURN resultado;
+END$$
+DELIMITER ;
+
+-- =========================================
+-- FUNCION: fn_validar_cedula
+-- Algoritmo modulo 10 para validar cedula
+-- =========================================
+DROP FUNCTION IF EXISTS fn_validar_cedula;
+DELIMITER $$
+CREATE FUNCTION fn_validar_cedula(p_cedula VARCHAR(10))
+RETURNS TINYINT
+DETERMINISTIC
+BEGIN
+    DECLARE i INT;
+    DECLARE suma INT DEFAULT 0;
+    DECLARE digito INT;
+    DECLARE coef INT;
+    DECLARE prod INT;
+    DECLARE verificadorCalculado INT;
+    DECLARE verificadorReal INT;
+    DECLARE provincia INT;
+    DECLARE tercerDigito INT;
+
+    -- Validar longitud
+    IF LENGTH(p_cedula) <> 10 THEN
+        RETURN 0;
+    END IF;
+
+    -- Provincia (primeros 2 dígitos)
+    SET provincia = CAST(SUBSTRING(p_cedula, 1, 2) AS UNSIGNED);
+    IF (provincia < 1 OR provincia > 24) AND provincia <> 30 THEN
+        RETURN 0;
+    END IF;
+
+    -- Tercer dígito
+    SET tercerDigito = CAST(SUBSTRING(p_cedula, 3, 1) AS UNSIGNED);
+    IF tercerDigito >= 6 THEN
+        RETURN 0;
+    END IF;
+
+    -- Calcular suma con coeficientes
+    SET i = 1;
+    WHILE i <= 9 DO
+        SET digito = CAST(SUBSTRING(p_cedula, i, 1) AS UNSIGNED);
+
+        IF MOD(i,2) = 1 THEN
+            SET coef = 2;
+        ELSE
+            SET coef = 1;
+        END IF;
+
+        SET prod = digito * coef;
+        IF prod >= 10 THEN
+            SET prod = prod - 9;
+        END IF;
+
+        SET suma = suma + prod;
+        SET i = i + 1;
+    END WHILE;
+
+    -- Dígito verificador
+    SET verificadorReal = CAST(SUBSTRING(p_cedula, 10, 1) AS UNSIGNED);
+    SET verificadorCalculado = (10 - (suma MOD 10)) MOD 10;
+
+    IF verificadorCalculado = verificadorReal THEN
+        RETURN 1; -- Válida
+    ELSE
+        RETURN 0; -- Inválida
+    END IF;
+END$$
+DELIMITER ;
+
+-- =======================================================================================================================================================
+-- FUNCIONES Y SPs DE LA APLICACION
+-- =======================================================================================================================================================
+DROP PROCEDURE IF EXISTS next_document_number;
+DELIMITER $$
+CREATE PROCEDURE next_document_number(IN doc_type VARCHAR(20), IN series VARCHAR(20), OUT next_num VARCHAR(50))
+BEGIN
+  DECLARE curr INT;
+  -- Obtener el número actual
+  SELECT current_number INTO curr
+  FROM document_numbers
+  WHERE doc_type = doc_type AND series = series
+  LIMIT 1;
+  -- Si no existe, inicializar
+  IF curr IS NULL THEN
+    SET curr = 0;
+    INSERT INTO document_numbers (doc_type, series, current_number)
+    VALUES (doc_type, series, curr);
+  END IF;
+  -- Incrementar
+  SET curr = curr + 1;
+  UPDATE document_numbers
+  SET current_number = curr
+  WHERE doc_type = doc_type AND series = series;
+  -- Retornar número formateado
+  SET next_num = CONCAT(series, '-', LPAD(curr, 8, '0'));
+END$$
+DELIMITER ;
+
+-- =======================================================================================================================================================
+-- VISTAS
+-- =======================================================================================================================================================
+-- =========================================
+-- VISTA: v_productos
+-- Todos los productos de todas las sucursales, con cantidad
+-- =========================================
+DROP VIEW IF EXISTS v_productos;
+CREATE VIEW v_productos AS
+SELECT 
+  P.ID_PRODUCTO       	AS idProducto,
+  SR.ID_SUCURSAL		AS idSucursal,
+  SR.NOMBRE_SUCURSAL	AS nombreSucursal,
+  P.NOMBRE_PRODUCTO   	AS nombreProducto,
+  P.PVP               	AS pvp,
+  P.DESCRIPCION       	AS descripcion,
+  P.ID_SUBCATEGORIA		AS idSubcategoria,
+  C.NOMBRE_CATEGORIA  	AS categoria,
+  SC.NOMBRE           	AS subcategoria,
+  P.ETIQUETAS         	AS etiquetas,
+  P.UNIDAD_MEDIDA     	AS unidadMedida,
+  P.PESO_VOLUMEN      	AS pesoVolumen,
+  SM.ID_STOCK			AS idStockMinimo,
+  SM.CANTIDAD          	AS stockMin,
+  SX.ID_STOCK			AS idStockMax,
+  SX.CANTIDAD			AS stockMaximo,
+  PS.CANTIDAD         	AS cantidad
+FROM PRODUCTOS p
+LEFT JOIN STOCK SM ON P.ID_STOCK_MIN=SM.ID_STOCK AND SM.TIPO_STOCK='M' AND SM.ESTADO='A'
+LEFT JOIN STOCK SX ON P.ID_STOCK_MAX=SX.ID_STOCK AND SX.TIPO_STOCK='X' AND SX.ESTADO='A'
+JOIN PRODUCTOS_SUCURSAL PS ON P.ID_PRODUCTO = PS.ID_PRODUCTO 
+JOIN SUCURSALES SR ON PS.ID_SUCURSAL=SR.ID_SUCURSAL
+JOIN SUBCATEGORIAS SC ON p.ID_SUBCATEGORIA=SC.ID_SUBCATEGORIA
+JOIN CATEGORIAS C ON SC.ID_CATEGORIA=C.ID_CATEGORIA
+WHERE P.ESTADO='A'
+ORDER BY P.ID_PRODUCTO,SR.ID_SUCURSAL;
+
+-- =========================================
+-- VISTA: v_ventas_detalle
+-- Todas las ventas con su detalle de productos
+-- =========================================
+DROP VIEW IF EXISTS v_ventas_detalle;
+CREATE VIEW v_ventas_detalle AS
+SELECT 
+  v.ID_VENTA          	AS idVenta,
+  v.FECHA_HORA        	AS fechaHora,
+  v.SUBTOTAL          	AS subtotal,
+  V.DESCUENTO			AS descuento,
+  CONCAT(TRUNCATE(I.VALOR_IMPUESTO,0),'%')	AS impuesto,
+  V.VALOR_IMPUESTO    	AS valorImpuesto,
+  V.TOTAL				AS total,
+  C.NOMBRES 			AS cliente,
+  E.NOMBRES				AS empleado,
+  S.ID_SUCURSAL			AS idSucursal,
+  S.NOMBRE_SUCURSAL		AS sucursal,
+  FP.NOMBRE_FORMA_PAGO	AS formaPago,
+  G.REFERENCIA			AS referenciaPago,
+  G.MONTO				AS montoPago,
+  G.ESTADO				AS estadoPago,
+  P.ID_PRODUCTO			AS idProducto,
+  P.NOMBRE_PRODUCTO		AS nombreProducto,
+  P.PVP					AS precioProducto,
+  CC.NOMBRE_CATEGORIA	AS nombreCategoria,
+  DV.CANTIDAD			AS cantidad
+FROM VENTA v
+JOIN IMPUESTO I ON V.ID_TIPO_IMPUESTO=I.ID_TIPO_IMPUESTO
+JOIN CLIENTE C ON V.ID_CLIENTE=C.ID_CLIENTE
+JOIN EMPLEADO E ON V.ID_EMPLEADO=E.ID_EMPLEADO
+JOIN SUCURSALES S ON V.ID_SUCURSAL=S.ID_SUCURSAL
+JOIN PAGO G ON V.ID_PAGO=G.ID_PAGO
+JOIN FORMA_PAGO FP ON G.ID_FORMA_PAGO=FP.ID_FORMA_PAGO
+JOIN DETALLE_VENTA DV ON V.ID_VENTA=DV.ID_VENTA
+JOIN PRODUCTOS P ON P.ID_PRODUCTO=DV.ID_PRODUCTO
+JOIN SUBCATEGORIAS SC ON P.ID_SUBCATEGORIA=SC.ID_SUBCATEGORIA
+JOIN CATEGORIAS CC ON CC.ID_CATEGORIA=SC.ID_CATEGORIA
+WHERE V.ESTADO = 'A'
+ORDER BY V.ID_VENTA,P.ID_PRODUCTO;
+
+-- =========================================
+-- VISTA: v_ventas
+-- Ventas unicas sin detalle de productos
+-- =========================================
+DROP VIEW IF EXISTS v_ventas;
+CREATE VIEW v_ventas AS
+SELECT 
+  v.ID_VENTA          	AS idVenta,
+  v.FECHA_HORA        	AS fechaHora,
+  v.SUBTOTAL          	AS subtotal,
+  V.DESCUENTO			AS descuento,
+  CONCAT(TRUNCATE(I.VALOR_IMPUESTO,0),'%')	AS impuesto,
+  V.VALOR_IMPUESTO    	AS valorImpuesto,
+  V.TOTAL				AS total,
+  C.NOMBRES 			AS cliente,
+  E.NOMBRES				AS empleado,
+  S.ID_SUCURSAL			AS idSucursal,
+  S.NOMBRE_SUCURSAL		AS sucursal,
+  FP.NOMBRE_FORMA_PAGO	AS formaPago,
+  G.REFERENCIA			AS referenciaPago,
+  G.MONTO				AS montoPago,
+  G.ESTADO				AS estadoPago
+FROM VENTA v
+JOIN IMPUESTO I ON V.ID_TIPO_IMPUESTO=I.ID_TIPO_IMPUESTO
+JOIN CLIENTE C ON V.ID_CLIENTE=C.ID_CLIENTE
+JOIN EMPLEADO E ON V.ID_EMPLEADO=E.ID_EMPLEADO
+JOIN SUCURSALES S ON V.ID_SUCURSAL=S.ID_SUCURSAL
+JOIN PAGO G ON V.ID_PAGO=G.ID_PAGO
+JOIN FORMA_PAGO FP ON G.ID_FORMA_PAGO=FP.ID_FORMA_PAGO
+WHERE V.ESTADO = 'A'
+ORDER BY V.ID_VENTA;
