@@ -4,6 +4,7 @@ import {
   getUsuarios,
   insertUsuario,
   updateUsuario,
+  updateUsuarioEstado,
 } from "../integrations/mysql/usuarios";
 import { UsuarioInsert, UsuarioSelect } from "../types/mysqltypes";
 
@@ -55,6 +56,21 @@ export const fnUsuarioDelete = createServerFn({ method: "POST" })
       return { success: true, data: result };
     } catch (error) {
       console.error("❌ [fnUsuarioDelete] Error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Error desconocido",
+      };
+    }
+  });
+
+export const fnUsuarioEstadoUpdate = createServerFn({ method: "POST" })
+  .validator((data: { id: number; estado: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const result = await updateUsuarioEstado(data.id, data.estado);
+      return { success: true, data: result };
+    } catch (error) {
+      console.error("❌ [fnUsuarioEstadoUpdate] Error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Error desconocido",

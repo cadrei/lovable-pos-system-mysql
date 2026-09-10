@@ -687,7 +687,43 @@ export interface UsuarioSelect extends RowDataPacket {
   ULTIMO_LOGIN: Date | null;
   FECHA_CREACION: Date;
   FECHA_MODIFICACION: Date;
+  ID_SUCURSAL: string | null;
+  NOMBRE_SUCURSAL: string | null;
 }
+
+export interface SeguridadRolSelect extends RowDataPacket {
+  id: number;
+  user_id: number;
+  role: string;
+}
+
+export interface AuditoriaUsuarioRow extends RowDataPacket {
+  ID_LOG: number;
+  USER_ID: number;
+  USER_EMAIL: string;
+  ACTION: string;
+  MODULE: string;
+  ENTITY: string | null;
+  ENTITY_ID: string | null;
+  OLD_VALUE: string | null;
+  NEW_VALUE: string | null;
+  IP: string | null;
+  FECHA_CREACION: Date;
+}
+
+export type AuditoriaUsuarioSelect = {
+  ID_LOG: number;
+  USER_ID: number;
+  USER_EMAIL: string;
+  ACTION: string;
+  MODULE: string;
+  ENTITY: string | null;
+  ENTITY_ID: string | null;
+  OLD_VALUE: string | null;
+  NEW_VALUE: string | null;
+  IP: string | null;
+  FECHA_CREACION: Date;
+};
 
 export type UsuarioInsert = {
   ID_EMPLEADO?: number | null;

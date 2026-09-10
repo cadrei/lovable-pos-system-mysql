@@ -534,7 +534,23 @@ CREATE TABLE USUARIOS (
   CONSTRAINT fk_usuario_empleado FOREIGN KEY (ID_EMPLEADO) REFERENCES SUCURSALES(ID_EMPLEADO) ON DELETE SET NULL,
   CONSTRAINT chk_estado_usuario CHECK (ESTADO IN ('A','I','S','P','E','O','R','T'))
 );
-
+-- ============================================
+-- Tabla: AUDITORIA_USUARIOS
+-- Propósito: Registrar acciones de usuarios en el sistema
+-- ============================================
+CREATE TABLE AUDITORIA_USUARIOS (
+    ID_LOG            INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único del log',
+    USER_ID			  INT NOT NULL COMMENT 'Id del Usuario',
+    USER_EMAIL        VARCHAR(150) NOT NULL COMMENT 'Correo del usuario',
+    ACTION            VARCHAR(100) NOT NULL COMMENT 'Acción realizada',
+    MODULE            VARCHAR(100) NOT NULL COMMENT 'Módulo afectado',
+    ENTITY            VARCHAR(100) COMMENT 'Entidad afectada',
+    ENTITY_ID         VARCHAR(100) COMMENT 'Identificador de la entidad',
+    OLD_VALUE         JSON COMMENT 'Valor anterior',
+    NEW_VALUE         JSON COMMENT 'Valor nuevo',
+    IP                VARCHAR(50) COMMENT 'Dirección IP',
+    FECHA_CREACION    TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora del evento'
+);
 -- =========================================
 -- TABLA: ROLES
 -- Roles de la Aplicación

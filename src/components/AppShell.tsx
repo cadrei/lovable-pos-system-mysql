@@ -25,7 +25,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const nav: { to: string; label: string; icon: LucideIcon; perm: string }[] = [
   { to: "/panel", label: "Panel", icon: LayoutDashboard, perm: "ventas.ver" },
   { to: "/ventas", label: "Ventas (POS)", icon: ScanLine, perm: "ventas.crear" },
-  { to: "/facturacion", label: "Facturación", icon: Receipt, perm: "facturacion.ver" },
+  /* { to: "/facturacion", label: "Facturación", icon: Receipt, perm: "facturacion.ver" }, */
   { to: "/inventario", label: "Inventario", icon: Boxes, perm: "inventario.ver" },
   {
     to: "/productosBeneficios",
@@ -35,7 +35,7 @@ const nav: { to: string; label: string; icon: LucideIcon; perm: string }[] = [
   },
   { to: "/caja", label: "Caja", icon: Wallet, perm: "caja.ver" },
   { to: "/clientes", label: "Clientes", icon: Users, perm: "clientes.ver" },
-  { to: "/proveedores", label: "Proveedores", icon: Truck, perm: "proveedores.ver" },
+  /* { to: "/proveedores", label: "Proveedores", icon: Truck, perm: "proveedores.ver" }, */
   { to: "/reportes", label: "Reportes", icon: BarChart3, perm: "reportes.ver" },
   { to: "/seguridad", label: "Seguridad", icon: ShieldCheck, perm: "usuarios.ver" },
   { to: "/configuracion", label: "Configuraci贸n", icon: Settings, perm: "configuracion.ver" },

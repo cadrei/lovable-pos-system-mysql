@@ -9,7 +9,7 @@ import {
 } from "react";
 import { jwtDecode } from "jwt-decode";
 
-export type Rol = "administrador" | "supervisor" | "cajero" | "bodega";
+export type Rol = "admin_matriz" | "admin_sucursal" | "empleado" | "visualizador";
 
 type SessionUser = {
   USER_ID?: number;
