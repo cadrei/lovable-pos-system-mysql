@@ -81,6 +81,34 @@ CREATE TABLE PRODUCTOS (
     CONSTRAINT fk_producto_subcategoria FOREIGN KEY (ID_SUBCATEGORIA) REFERENCES SUBCATEGORIAS(ID_SUBCATEGORIA) ON DELETE RESTRICT
 ) COMMENT='Tabla de productos con información de inventario, clasificación y auditoría';
 -- Pendiente - agregar campo url_imagen que apunte a una ruta relativa de imagenes del proyecto, con el nombre de la imagen del producto
+-- ============================================
+-- Tabla: MARCAS
+-- Propósito: Registrar las marcas de productos
+-- ============================================
+DROP TABLE IF EXISTS MARCAS;
+CREATE TABLE MARCAS (
+    ID_MARCA			INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Clave Primara',
+    NOMBRE 				VARCHAR(100) NOT NULL COMMENT 'Nombre de la Marca',
+    DESCRIPCION			VARCHAR(300) COMMENT 'Descripcion de la Marca',
+    ESTADO 				CHAR(1)		DEFAULT 'A' COMMENT 'Estado de la marca (A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test)',
+    FECHA_CREACION 		TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha de Creacion',
+    FECHA_ACTUALIZACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Fecha de Actualizacion',
+    CONSTRAINT chk_estado_marca CHECK (ESTADO IN ('A','I','S','P','E','O','R','T'))
+);
+-- ============================================
+-- Tabla: LABORATORIOS
+-- Propósito: Registrar los laboratorios fabricantes de productos
+-- ============================================
+DROP TABLE IF EXISTS LABORATORIOS;
+CREATE TABLE LABORATORIOS (
+    ID_LABORATORIO      INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Clave Primaria',
+    NOMBRE              VARCHAR(250) NOT NULL COMMENT 'Nombre del Laboratorio',
+    DESCRIPCION			VARCHAR(300) COMMENT 'Descripcion del Laboratorio',
+    ESTADO              CHAR(1) DEFAULT 'A' COMMENT 'Estado del laboratorio (A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test)',
+    FECHA_CREACION      TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha de Creación',
+    FECHA_ACTUALIZACION TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Fecha de Actualización',
+    CONSTRAINT chk_estado_lab CHECK (ESTADO IN ('A','I','S','P','E','O','R','T'))
+);
 -- =========================================
 -- TABLA: SUCURSALES
 -- Informacion de Sucursales

@@ -17,7 +17,10 @@ export const Route = createFileRoute("/_authenticated/configuracion")({
   head: () => ({
     meta: [
       { title: "Configuración — PuntoVenta" },
-      { name: "description", content: "Datos de la empresa, sucursales, cajas, catálogos y parámetros del sistema." },
+      {
+        name: "description",
+        content: "Datos de la empresa, sucursales, cajas, catálogos y parámetros del sistema.",
+      },
       { property: "og:title", content: "Configuración — PuntoVenta" },
       { property: "og:description", content: "Parámetros generales del punto de venta." },
     ],
@@ -30,7 +33,7 @@ type Catalogo = "categories" | "brands" | "units" | "taxes";
 function Configuracion() {
   const qc = useQueryClient();
   const { can } = useSession();
-  const puedeEditar = can("settings.update");
+  const puedeEditar = can("configuracion.editar");
 
   const empresaQ = useQuery({
     queryKey: ["cfg-empresa"],
@@ -104,7 +107,12 @@ function Configuracion() {
     },
   });
 
-  const [nuevaSucursal, setNuevaSucursal] = useState({ code: "", name: "", address: "", phone: "" });
+  const [nuevaSucursal, setNuevaSucursal] = useState({
+    code: "",
+    name: "",
+    address: "",
+    phone: "",
+  });
   const crearSucursal = useMutation({
     mutationFn: async () => {
       if (!empresaQ.data) throw new Error("No hay empresa registrada");
@@ -170,10 +178,14 @@ function Configuracion() {
       const nombre = nuevoCat[tabla].trim();
       if (!nombre) throw new Error("Escribe un nombre");
       if (tabla === "units") {
-        const { error } = await supabase.from("units").insert({ code: nuevoUnitCode || nombre.slice(0, 3), name: nombre });
+        const { error } = await supabase
+          .from("units")
+          .insert({ code: nuevoUnitCode || nombre.slice(0, 3), name: nombre });
         if (error) throw error;
       } else if (tabla === "taxes") {
-        const { error } = await supabase.from("taxes").insert({ name: nombre, rate: Number(nuevaTasa) / 100 });
+        const { error } = await supabase
+          .from("taxes")
+          .insert({ name: nombre, rate: Number(nuevaTasa) / 100 });
         if (error) throw error;
       } else if (tabla === "categories") {
         const { error } = await supabase.from("categories").insert({ name: nombre });
@@ -194,7 +206,10 @@ function Configuracion() {
   const ajustesQ = useQuery({
     queryKey: ["cfg-ajustes"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("system_settings").select("key, value, description").order("key");
+      const { data, error } = await supabase
+        .from("system_settings")
+        .select("key, value, description")
+        .order("key");
       if (error) throw error;
       return data;
     },
@@ -217,7 +232,10 @@ function Configuracion() {
     if (ajustesQ.data) {
       setAjustes(
         Object.fromEntries(
-          ajustesQ.data.map((a) => [a.key, typeof a.value === "string" ? a.value : JSON.stringify(a.value)]),
+          ajustesQ.data.map((a) => [
+            a.key,
+            typeof a.value === "string" ? a.value : JSON.stringify(a.value),
+          ]),
         ),
       );
     }
@@ -300,19 +318,31 @@ function Configuracion() {
             <div className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-5">
               <div className="space-y-1.5">
                 <Label>Código</Label>
-                <Input value={nuevaSucursal.code} onChange={(e) => setNuevaSucursal({ ...nuevaSucursal, code: e.target.value })} />
+                <Input
+                  value={nuevaSucursal.code}
+                  onChange={(e) => setNuevaSucursal({ ...nuevaSucursal, code: e.target.value })}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Nombre</Label>
-                <Input value={nuevaSucursal.name} onChange={(e) => setNuevaSucursal({ ...nuevaSucursal, name: e.target.value })} />
+                <Input
+                  value={nuevaSucursal.name}
+                  onChange={(e) => setNuevaSucursal({ ...nuevaSucursal, name: e.target.value })}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Dirección</Label>
-                <Input value={nuevaSucursal.address} onChange={(e) => setNuevaSucursal({ ...nuevaSucursal, address: e.target.value })} />
+                <Input
+                  value={nuevaSucursal.address}
+                  onChange={(e) => setNuevaSucursal({ ...nuevaSucursal, address: e.target.value })}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Teléfono</Label>
-                <Input value={nuevaSucursal.phone} onChange={(e) => setNuevaSucursal({ ...nuevaSucursal, phone: e.target.value })} />
+                <Input
+                  value={nuevaSucursal.phone}
+                  onChange={(e) => setNuevaSucursal({ ...nuevaSucursal, phone: e.target.value })}
+                />
               </div>
               <div className="flex items-end">
                 <Button
@@ -344,11 +374,17 @@ function Configuracion() {
                     <td className="font-medium">{s.name}</td>
                     <td className="text-muted-foreground">{s.address ?? "—"}</td>
                     <td>
-                      <Badge variant={s.active ? "secondary" : "outline"}>{s.active ? "Activa" : "Inactiva"}</Badge>
+                      <Badge variant={s.active ? "secondary" : "outline"}>
+                        {s.active ? "Activa" : "Inactiva"}
+                      </Badge>
                     </td>
                     <td className="py-2 pr-3 text-right">
                       {puedeEditar && (
-                        <Button size="sm" variant="outline" onClick={() => alternarSucursal.mutate({ id: s.id, active: !s.active })}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => alternarSucursal.mutate({ id: s.id, active: !s.active })}
+                        >
                           {s.active ? "Desactivar" : "Activar"}
                         </Button>
                       )}
@@ -360,7 +396,9 @@ function Configuracion() {
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-border bg-card">
-            <p className="border-b border-border bg-muted/40 p-3 text-xs font-semibold uppercase tracking-wide">Cajas</p>
+            <p className="border-b border-border bg-muted/40 p-3 text-xs font-semibold uppercase tracking-wide">
+              Cajas
+            </p>
             <table className="w-full text-sm">
               <thead className="text-left text-xs uppercase text-muted-foreground">
                 <tr>
@@ -380,11 +418,17 @@ function Configuracion() {
                       {(sucursalesQ.data ?? []).find((s) => s.id === c.branch_id)?.name ?? "—"}
                     </td>
                     <td>
-                      <Badge variant={c.active ? "secondary" : "outline"}>{c.active ? "Activa" : "Inactiva"}</Badge>
+                      <Badge variant={c.active ? "secondary" : "outline"}>
+                        {c.active ? "Activa" : "Inactiva"}
+                      </Badge>
                     </td>
                     <td className="py-2 pr-3 text-right">
                       {puedeEditar && (
-                        <Button size="sm" variant="outline" onClick={() => alternarCaja.mutate({ id: c.id, active: !c.active })}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => alternarCaja.mutate({ id: c.id, active: !c.active })}
+                        >
                           {c.active ? "Desactivar" : "Activar"}
                         </Button>
                       )}
@@ -398,12 +442,14 @@ function Configuracion() {
 
         <TabsContent value="catalogos" className="pt-4">
           <div className="grid gap-4 lg:grid-cols-2">
-            {([
-              ["categories", "Categorías"],
-              ["brands", "Marcas"],
-              ["units", "Unidades"],
-              ["taxes", "Impuestos"],
-            ] as [Catalogo, string][]).map(([tabla, titulo]) => (
+            {(
+              [
+                ["categories", "Categorías"],
+                ["brands", "Marcas"],
+                ["units", "Unidades"],
+                ["taxes", "Impuestos"],
+              ] as [Catalogo, string][]
+            ).map(([tabla, titulo]) => (
               <div key={tabla} className="rounded-xl border border-border bg-card">
                 <p className="border-b border-border bg-muted/40 p-3 text-xs font-semibold uppercase tracking-wide">
                   {titulo}
@@ -432,7 +478,10 @@ function Configuracion() {
                         onChange={(e) => setNuevaTasa(e.target.value)}
                       />
                     )}
-                    <Button onClick={() => crearCatalogo.mutate(tabla)} disabled={crearCatalogo.isPending}>
+                    <Button
+                      onClick={() => crearCatalogo.mutate(tabla)}
+                      disabled={crearCatalogo.isPending}
+                    >
                       Agregar
                     </Button>
                   </div>
@@ -444,7 +493,9 @@ function Configuracion() {
                       {"rate" in r ? (
                         <Badge variant="outline">{num(Number(r.rate) * 100, 0)}%</Badge>
                       ) : (
-                        <Badge variant={r.active ? "secondary" : "outline"}>{r.active ? "Activo" : "Inactivo"}</Badge>
+                        <Badge variant={r.active ? "secondary" : "outline"}>
+                          {r.active ? "Activo" : "Inactivo"}
+                        </Badge>
                       )}
                     </li>
                   ))}
@@ -473,7 +524,9 @@ function Configuracion() {
                 {puedeEditar && (
                   <Button
                     variant="outline"
-                    onClick={() => guardarAjuste.mutate({ key: a.key, value: ajustes[a.key] ?? "" })}
+                    onClick={() =>
+                      guardarAjuste.mutate({ key: a.key, value: ajustes[a.key] ?? "" })
+                    }
                     disabled={guardarAjuste.isPending}
                   >
                     Guardar

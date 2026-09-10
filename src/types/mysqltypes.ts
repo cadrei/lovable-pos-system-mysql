@@ -830,3 +830,34 @@ export type DocumentNumberInsert = {
   series: string;
   current_number?: number;
 };
+
+export interface MarcaSelect extends RowDataPacket {
+  ID_MARCA: number;
+  NOMBRE: string;
+  DESCRIPCION?: string;
+  ESTADO: "A" | "I" | "S" | "P" | "E" | "O" | "R" | "T";
+  FECHA_CREACION: Date;
+  FECHA_ACTUALIZACION: Date;
+}
+
+export type MarcaInsert = {
+  NOMBRE: string;
+  DESCRIPCION?: string;
+  ESTADO?: "A" | "I" | "S" | "P" | "E" | "O" | "R" | "T"; // por defecto 'A'
+};
+
+export interface LaboratorioSelect extends RowDataPacket {
+  ID_LABORATORIO: number;
+  NOMBRE: string;
+  DESCRIPCION?: string;
+  ESTADO: "A" | "I" | "S" | "P" | "E" | "O" | "R" | "T";
+  FECHA_CREACION: Date;
+  FECHA_ACTUALIZACION: Date;
+}
+
+// Tipo para INSERT (creación de registros)
+export type LaboratorioInsert = {
+  NOMBRE: string;
+  DESCRIPCION?: string;
+  ESTADO?: "A" | "I" | "S" | "P" | "E" | "O" | "R" | "T"; // por defecto 'A'
+};
