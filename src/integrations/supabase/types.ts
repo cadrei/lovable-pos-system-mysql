@@ -1089,7 +1089,7 @@ export type Database = {
       };
     };
     Enums: {
-      app_role: "administrador" | "supervisor" | "cajero" | "bodega";
+      app_role: "admin_matriz" | "admin_sucursal" | "empleado" | "visualizador";
       cash_movement_type: "venta" | "ingreso" | "egreso" | "retiro" | "devolucion" | "apertura";
       cash_status: "abierta" | "cerrada";
       id_type: "cedula" | "ruc" | "pasaporte" | "consumidor_final";
@@ -1219,7 +1219,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["administrador", "supervisor", "cajero", "bodega"],
+      app_role: ["admin_matriz", "admin_sucursal", "empleado", "visualizador"],
       cash_movement_type: ["venta", "ingreso", "egreso", "retiro", "devolucion", "apertura"],
       cash_status: ["abierta", "cerrada"],
       id_type: ["cedula", "ruc", "pasaporte", "consumidor_final"],

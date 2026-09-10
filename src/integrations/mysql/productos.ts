@@ -3,6 +3,16 @@ import type { RowDataPacket } from "mysql2";
 import { ProductoRow } from "@/types/mysqltypes";
 import { ProductoInsertRow } from "@/types/mysqltypes";
 import { ProductoBeneficioRow } from "@/types/mysqltypes";
+import { VistaProductos } from "@/types/mysqltypes";
+
+export async function getProductosReporte(): Promise<VistaProductos[]> {
+  console.log("🔵 [DB] Obteniendo productos para reportes");
+  const [rows] = await pool.query<VistaProductos[]>(
+    "SELECT idProducto AS id, idProducto AS code, nombreProducto AS name, cantidad AS stock, COALESCE(stockMin, 0) AS min_stock, 0 AS cost_price, pvp AS sale_price, TRUE AS active FROM v_productos ORDER BY nombreProducto",
+  );
+  console.log(`✅ [DB] Productos de reportes retornados: ${rows.length}`);
+  return rows;
+}
 
 export async function getProductos(sucursalId: string): Promise<ProductoRow[]> {
   console.log(`🔵 [DB] Obteniendo productos para la sucursal ${sucursalId}`);
@@ -55,7 +65,8 @@ export async function getProductosBeneficio(
 }
 
 export async function insertProducto(producto: ProductoInsertRow) {
-  const [result] = await pool.query(
+  console.log(`🔵 [DB] Insertando producto ${producto["ID_PRODUCTO"]}`);
+  const [result] = await pool.query<ResultSetHeader>(
     `
     INSERT INTO PRODUCTOS (
       ID_PRODUCTO,
@@ -93,5 +104,57 @@ export async function insertProducto(producto: ProductoInsertRow) {
       producto["ESTADO"] ?? "A",
     ],
   );
+  console.log(`✅ [DB] Registros afectados: ${result.affectedRows}`);
   return result;
+}
+
+import type { ResultSetHeader } from "mysql2/promise";
+import { ProductoSelect } from "@/types/mysqltypes";
+
+export async function getProductosDetalle(): Promise<ProductoSelect[]> {
+  console.log("🔵 [DB] Obteniendo productos completos");
+  const [rows] = await pool.query<ProductoSelect[]>(
+    "SELECT ID_PRODUCTO, NOMBRE_PRODUCTO, PVP, DESCRIPCION, ID_SUBCATEGORIA, ETIQUETAS, UNIDAD_MEDIDA, PESO_VOLUMEN, ID_LABORATORIO, CODIGO_BARRAS, FECHA_CADUCIDAD, ID_STOCK_MIN, ID_STOCK_MAX, ID_PROVEEDOR, FECHA_CREACION, FECHA_ACTUALIZACION, ESTADO FROM PRODUCTOS ORDER BY NOMBRE_PRODUCTO",
+  );
+  console.log(`✅ [DB] Productos retornados: ${rows.length}`);
+  return rows;
+}
+
+export async function updateProducto(
+  id: string,
+  producto: Partial<ProductoInsertRow>,
+): Promise<number> {
+  console.log(`🔵 [DB] Actualizando producto ${id}`);
+  const [result] = await pool.query<ResultSetHeader>(
+    "UPDATE PRODUCTOS SET NOMBRE_PRODUCTO = COALESCE(?, NOMBRE_PRODUCTO), PVP = COALESCE(?, PVP), DESCRIPCION = ?, ID_SUBCATEGORIA = COALESCE(?, ID_SUBCATEGORIA), ETIQUETAS = ?, UNIDAD_MEDIDA = ?, PESO_VOLUMEN = ?, ID_LABORATORIO = ?, CODIGO_BARRAS = ?, FECHA_CADUCIDAD = ?, ID_STOCK_MIN = ?, ID_STOCK_MAX = ?, ID_PROVEEDOR = ?, ESTADO = COALESCE(?, ESTADO) WHERE ID_PRODUCTO = ?",
+    [
+      producto.NOMBRE_PRODUCTO ?? null,
+      producto.PVP ?? null,
+      producto.DESCRIPCION ?? null,
+      producto.ID_SUBCATEGORIA ?? null,
+      producto.ETIQUETAS ?? null,
+      producto.UNIDAD_MEDIDA ?? null,
+      producto.PESO_VOLUMEN ?? null,
+      producto.ID_LABORATORIO ?? null,
+      producto.CODIGO_BARRAS ?? null,
+      producto.FECHA_CADUCIDAD ?? null,
+      producto.ID_STOCK_MIN ?? null,
+      producto.ID_STOCK_MAX ?? null,
+      producto.ID_PROVEEDOR ?? null,
+      producto.ESTADO ?? null,
+      id,
+    ],
+  );
+  console.log(`✅ [DB] Registros afectados: ${result.affectedRows}`);
+  return result.affectedRows;
+}
+
+export async function deleteProducto(id: string): Promise<number> {
+  console.log(`🔵 [DB] Eliminando producto ${id}`);
+  const [result] = await pool.query<ResultSetHeader>(
+    "DELETE FROM PRODUCTOS WHERE ID_PRODUCTO = ?",
+    [id],
+  );
+  console.log(`✅ [DB] Registros afectados: ${result.affectedRows}`);
+  return result.affectedRows;
 }

@@ -1,0 +1,52 @@
+import pool from "../../../database/mysqlpool";
+import type { ResultSetHeader } from "mysql2/promise";
+import { TransferenciaInsert, TransferenciaSelect } from "@/types/mysqltypes";
+
+export async function getTransferencias(): Promise<TransferenciaSelect[]> {
+  console.log("🔵 [DB] Obteniendo transferencias");
+  const [rows] = await pool.query<TransferenciaSelect[]>(
+    "SELECT ID_TRANSFERENCIA, ID_PRODUCTO, SUC_ORIGEN, SUC_DESTINO, CANTIDAD, FECHA FROM TRANSFERENCIA ORDER BY FECHA DESC",
+  );
+  console.log(`✅ [DB] Transferencias retornadas: ${rows.length}`);
+  return rows;
+}
+
+export async function insertTransferencia(data: TransferenciaInsert): Promise<number> {
+  console.log("🔵 [DB] Insertando transferencia");
+  const [result] = await pool.query<ResultSetHeader>(
+    "INSERT INTO TRANSFERENCIA (ID_PRODUCTO, SUC_ORIGEN, SUC_DESTINO, CANTIDAD, FECHA) VALUES (?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))",
+    [data.ID_PRODUCTO, data.SUC_ORIGEN, data.SUC_DESTINO, data.CANTIDAD, data.FECHA ?? null],
+  );
+  console.log(`✅ [DB] Registros afectados: ${result.affectedRows}`);
+  return result.insertId;
+}
+
+export async function updateTransferencia(
+  id: number,
+  data: Partial<TransferenciaInsert>,
+): Promise<number> {
+  console.log(`🔵 [DB] Actualizando transferencia ${id}`);
+  const [result] = await pool.query<ResultSetHeader>(
+    "UPDATE TRANSFERENCIA SET ID_PRODUCTO = COALESCE(?, ID_PRODUCTO), SUC_ORIGEN = COALESCE(?, SUC_ORIGEN), SUC_DESTINO = COALESCE(?, SUC_DESTINO), CANTIDAD = COALESCE(?, CANTIDAD), FECHA = COALESCE(?, FECHA) WHERE ID_TRANSFERENCIA = ?",
+    [
+      data.ID_PRODUCTO ?? null,
+      data.SUC_ORIGEN ?? null,
+      data.SUC_DESTINO ?? null,
+      data.CANTIDAD ?? null,
+      data.FECHA ?? null,
+      id,
+    ],
+  );
+  console.log(`✅ [DB] Registros afectados: ${result.affectedRows}`);
+  return result.affectedRows;
+}
+
+export async function deleteTransferencia(id: number): Promise<number> {
+  console.log(`🔵 [DB] Eliminando transferencia ${id}`);
+  const [result] = await pool.query<ResultSetHeader>(
+    "DELETE FROM TRANSFERENCIA WHERE ID_TRANSFERENCIA = ?",
+    [id],
+  );
+  console.log(`✅ [DB] Registros afectados: ${result.affectedRows}`);
+  return result.affectedRows;
+}
