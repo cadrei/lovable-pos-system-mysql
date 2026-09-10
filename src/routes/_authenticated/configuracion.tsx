@@ -9,9 +9,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/use-session";
 import { num } from "@/lib/format";
+import {
+  fnCfgCajaToggle,
+  fnCfgCajasGet,
+  fnCfgCategoriaInsert,
+  fnCfgCategoriasGet,
+  fnCfgImpuestoInsert,
+  fnCfgImpuestosGet,
+  fnCfgMarcaInsert,
+  fnCfgMarcasGet,
+  fnCfgSucursalInsert,
+  fnCfgSucursalToggle,
+  fnCfgSucursalesGet,
+} from "@/server-functions/fnconfiguracion";
+import { fnCfgAjustePersist } from "@/server-functions/fncfgajustes";
+import {
+  defaultEmpresaConfig,
+  defaultSystemSettings,
+  defaultUnidadesMedida,
+  type EmpresaConfig,
+  type SystemSetting,
+  type UnidadMedida,
+} from "@/types/genericTypes";
 
 export const Route = createFileRoute("/_authenticated/configuracion")({
   head: () => ({
@@ -35,14 +56,8 @@ function Configuracion() {
   const { can } = useSession();
   const puedeEditar = can("configuracion.editar");
 
-  const empresaQ = useQuery({
-    queryKey: ["cfg-empresa"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("*").limit(1).maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Compañía (parametrizada en genericTypes, persistencia simulada en memoria)
+  const [empresas, setEmpresas] = useState<EmpresaConfig[]>([defaultEmpresaConfig]);
 
   const [empresa, setEmpresa] = useState({
     name: "",
@@ -54,37 +69,36 @@ function Configuracion() {
   });
 
   useEffect(() => {
-    if (empresaQ.data) {
+    const actual = empresas[empresas.length - 1];
+    if (actual) {
       setEmpresa({
-        name: empresaQ.data.name ?? "",
-        tax_id: empresaQ.data.tax_id ?? "",
-        address: empresaQ.data.address ?? "",
-        phone: empresaQ.data.phone ?? "",
-        email: empresaQ.data.email ?? "",
-        logo_url: empresaQ.data.logo_url ?? "",
+        name: actual.name ?? "",
+        tax_id: actual.tax_id ?? "",
+        address: actual.address ?? "",
+        phone: actual.phone ?? "",
+        email: actual.email ?? "",
+        logo_url: actual.logo_url ?? "",
       });
     }
-  }, [empresaQ.data]);
+  }, [empresas]);
 
   const guardarEmpresa = useMutation({
     mutationFn: async () => {
-      if (!empresaQ.data) throw new Error("No hay empresa registrada");
-      const { error } = await supabase
-        .from("companies")
-        .update({
-          name: empresa.name,
-          tax_id: empresa.tax_id,
-          address: empresa.address || null,
-          phone: empresa.phone || null,
-          email: empresa.email || null,
-          logo_url: empresa.logo_url || null,
-        })
-        .eq("id", empresaQ.data.id);
-      if (error) throw error;
+      const actual = empresas[empresas.length - 1];
+      if (!actual) throw new Error("No hay empresa registrada");
+      const nueva: EmpresaConfig = {
+        ...actual,
+        name: empresa.name,
+        tax_id: empresa.tax_id,
+        address: empresa.address,
+        phone: empresa.phone,
+        email: empresa.email,
+        logo_url: empresa.logo_url,
+      };
+      setEmpresas([...empresas.slice(0, -1), nueva]);
     },
     onSuccess: () => {
       toast.success("Datos de la empresa actualizados");
-      qc.invalidateQueries({ queryKey: ["cfg-empresa"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -92,18 +106,18 @@ function Configuracion() {
   const sucursalesQ = useQuery({
     queryKey: ["cfg-sucursales"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("branches").select("*").order("name");
-      if (error) throw error;
-      return data;
+      const result = await fnCfgSucursalesGet();
+      if (!result.success) throw new Error(result.error);
+      return result.data;
     },
   });
 
   const cajasQ = useQuery({
     queryKey: ["cfg-cajas"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("cash_registers").select("*").order("name");
-      if (error) throw error;
-      return data;
+      const result = await fnCfgCajasGet();
+      if (!result.success) throw new Error(result.error);
+      return result.data;
     },
   });
 
@@ -115,15 +129,16 @@ function Configuracion() {
   });
   const crearSucursal = useMutation({
     mutationFn: async () => {
-      if (!empresaQ.data) throw new Error("No hay empresa registrada");
-      const { error } = await supabase.from("branches").insert({
-        company_id: empresaQ.data.id,
-        code: nuevaSucursal.code,
-        name: nuevaSucursal.name,
-        address: nuevaSucursal.address || null,
-        phone: nuevaSucursal.phone || null,
+      const result = await fnCfgSucursalInsert({
+        data: {
+          code: nuevaSucursal.code,
+          name: nuevaSucursal.name,
+          address: nuevaSucursal.address,
+          phone: nuevaSucursal.phone,
+        },
       });
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
+      return result.data;
     },
     onSuccess: () => {
       toast.success("Sucursal creada");
@@ -135,8 +150,9 @@ function Configuracion() {
 
   const alternarSucursal = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("branches").update({ active }).eq("id", id);
-      if (error) throw error;
+      const result = await fnCfgSucursalToggle({ data: { id, active } });
+      if (!result.success) throw new Error(result.error);
+      return result.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["cfg-sucursales"] }),
     onError: (e: Error) => toast.error(e.message),
@@ -144,27 +160,38 @@ function Configuracion() {
 
   const alternarCaja = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("cash_registers").update({ active }).eq("id", id);
-      if (error) throw error;
+      const result = await fnCfgCajaToggle({ data: { id, active } });
+      if (!result.success) throw new Error(result.error);
+      return result.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["cfg-cajas"] }),
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Unidades de medida parametrizadas (persistencia simulada en memoria)
+  const [unidades, setUnidades] = useState<UnidadMedida[]>(defaultUnidadesMedida);
+
   const catalogosQ = useQuery({
     queryKey: ["cfg-catalogos"],
     queryFn: async () => {
-      const [cat, mar, uni, imp] = await Promise.all([
-        supabase.from("categories").select("id, name, active").order("name"),
-        supabase.from("brands").select("id, name, active").order("name"),
-        supabase.from("units").select("id, code, name, active").order("name"),
-        supabase.from("taxes").select("id, name, rate, active").order("name"),
+      const [cat, mar, imp] = await Promise.all([
+        fnCfgCategoriasGet(),
+        fnCfgMarcasGet(),
+        fnCfgImpuestosGet(),
       ]);
+      if (!cat.success) throw new Error(cat.error);
+      if (!mar.success) throw new Error(mar.error);
+      if (!imp.success) throw new Error(imp.error);
       return {
-        categories: cat.data ?? [],
-        brands: mar.data ?? [],
-        units: uni.data ?? [],
-        taxes: imp.data ?? [],
+        categories: cat.data,
+        brands: mar.data,
+        units: unidades.map((u, i) => ({
+          id: u.codigo || String(i),
+          code: u.codigo,
+          name: u.nombre,
+          active: u.activo ?? true,
+        })),
+        taxes: imp.data,
       };
     },
   });
@@ -178,21 +205,23 @@ function Configuracion() {
       const nombre = nuevoCat[tabla].trim();
       if (!nombre) throw new Error("Escribe un nombre");
       if (tabla === "units") {
-        const { error } = await supabase
-          .from("units")
-          .insert({ code: nuevoUnitCode || nombre.slice(0, 3), name: nombre });
-        if (error) throw error;
+        const nueva: UnidadMedida = {
+          codigo: nuevoUnitCode || nombre.slice(0, 3),
+          nombre,
+          activo: true,
+        };
+        setUnidades([...unidades, nueva]);
       } else if (tabla === "taxes") {
-        const { error } = await supabase
-          .from("taxes")
-          .insert({ name: nombre, rate: Number(nuevaTasa) / 100 });
-        if (error) throw error;
+        const result = await fnCfgImpuestoInsert({
+          data: { name: nombre, rate: Number(nuevaTasa) },
+        });
+        if (!result.success) throw new Error(result.error);
       } else if (tabla === "categories") {
-        const { error } = await supabase.from("categories").insert({ name: nombre });
-        if (error) throw error;
+        const result = await fnCfgCategoriaInsert({ data: { name: nombre } });
+        if (!result.success) throw new Error(result.error);
       } else {
-        const { error } = await supabase.from("brands").insert({ name: nombre });
-        if (error) throw error;
+        const result = await fnCfgMarcaInsert({ data: { name: nombre } });
+        if (!result.success) throw new Error(result.error);
       }
     },
     onSuccess: (_d, tabla) => {
@@ -203,43 +232,36 @@ function Configuracion() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const ajustesQ = useQuery({
-    queryKey: ["cfg-ajustes"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("system_settings")
-        .select("key, value, description")
-        .order("key");
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Ajustes del sistema parametrizados (persistencia simulada en memoria)
+  const [ajustesLista, setAjustesLista] = useState<SystemSetting[]>(defaultSystemSettings);
 
   const guardarAjuste = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      const { error } = await supabase.from("system_settings").update({ value }).eq("key", key);
-      if (error) throw error;
+      const descripcion = ajustesLista.find((a) => a.key === key)?.description;
+      const result = await fnCfgAjustePersist({
+        data: { key, value, ...(descripcion !== undefined ? { description: descripcion } : {}) },
+      });
+      if (!result.success) throw new Error(result.error);
+      setAjustesLista(ajustesLista.map((a) => (a.key === key ? { ...a, value } : a)));
+      return result.data;
     },
     onSuccess: () => {
       toast.success("Parámetro actualizado");
-      qc.invalidateQueries({ queryKey: ["cfg-ajustes"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const [ajustes, setAjustes] = useState<Record<string, string>>({});
   useEffect(() => {
-    if (ajustesQ.data) {
-      setAjustes(
-        Object.fromEntries(
-          ajustesQ.data.map((a) => [
-            a.key,
-            typeof a.value === "string" ? a.value : JSON.stringify(a.value),
-          ]),
-        ),
-      );
-    }
-  }, [ajustesQ.data]);
+    setAjustes(
+      Object.fromEntries(
+        ajustesLista.map((a) => [
+          a.key,
+          typeof a.value === "string" ? a.value : JSON.stringify(a.value),
+        ]),
+      ),
+    );
+  }, [ajustesLista]);
 
   const catalogos = catalogosQ.data;
 
@@ -491,7 +513,7 @@ function Configuracion() {
                     <li key={r.id} className="flex items-center justify-between p-3">
                       <span>{r.name}</span>
                       {"rate" in r ? (
-                        <Badge variant="outline">{num(Number(r.rate) * 100, 0)}%</Badge>
+                        <Badge variant="outline">{num(Number(r.rate), 0)}%</Badge>
                       ) : (
                         <Badge variant={r.active ? "secondary" : "outline"}>
                           {r.active ? "Activo" : "Inactivo"}
@@ -510,7 +532,7 @@ function Configuracion() {
 
         <TabsContent value="parametros" className="pt-4">
           <div className="max-w-3xl space-y-3 rounded-xl border border-border bg-card p-5">
-            {(ajustesQ.data ?? []).map((a) => (
+            {ajustesLista.map((a) => (
               <div key={a.key} className="grid gap-2 sm:grid-cols-[1fr_2fr_auto] sm:items-end">
                 <div>
                   <p className="font-mono text-xs">{a.key}</p>
@@ -534,7 +556,7 @@ function Configuracion() {
                 )}
               </div>
             ))}
-            {(ajustesQ.data ?? []).length === 0 && (
+            {ajustesLista.length === 0 && (
               <p className="text-sm text-muted-foreground">No hay parámetros configurados.</p>
             )}
           </div>
