@@ -1,6 +1,16 @@
 import pool from "../../../database/mysqlpool";
 import type { ResultSetHeader } from "mysql2/promise";
-import { PagoInsert, PagoSelect } from "@/types/mysqltypes";
+import { PagoInsert, PagoSelect, PagosMetodo } from "@/types/mysqltypes";
+
+export async function getPagosMetodo(desde: string, hasta: string): Promise<PagosMetodo[]> {
+  console.log("🔵 [DB] Obteniendo pagos por método para reportes");
+  const [rows] = await pool.query<PagosMetodo[]>(
+    "SELECT F.NOMBRE_FORMA_PAGO AS method, P.MONTO AS amount, P.FECHA_HORA AS created_at FROM PAGO P JOIN FORMA_PAGO F ON P.ID_FORMA_PAGO = F.ID_FORMA_PAGO WHERE P.FECHA_HORA >= ? AND P.FECHA_HORA <= ?",
+    [desde, hasta],
+  );
+  console.log(`✅ [DB] Pagos por método retornados: ${rows.length}`);
+  return rows.map((row) => ({ ...row, created_at: new Date(row.created_at).toISOString() }));
+}
 
 export async function getPagos(): Promise<PagoSelect[]> {
   console.log("🔵 [DB] Obteniendo pagos");

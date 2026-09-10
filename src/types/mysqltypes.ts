@@ -91,6 +91,63 @@ export interface VentaDetalleRow extends RowDataPacket {
   nombreCategoria: string;
 }
 
+export interface VistaVentas extends RowDataPacket {
+  id: number;
+  idVenta: number;
+  number: number;
+  created_at: string;
+  total: number;
+  subtotal: number;
+  tax: number;
+  discount: number;
+  cost_total: number;
+  status: string;
+  user_name: string | null;
+}
+
+export interface PagosMetodo extends RowDataPacket {
+  method: string;
+  amount: number;
+  created_at: string;
+}
+
+export interface VistaDetalleVentas extends RowDataPacket {
+  description: string;
+  quantity: number;
+  total: number;
+  unit_cost: number;
+  created_at: string;
+  status: string;
+}
+
+export interface VistaProductos extends RowDataPacket {
+  id: string;
+  code: string;
+  name: string;
+  stock: number;
+  min_stock: number;
+  cost_price: number;
+  sale_price: number;
+  active: boolean;
+}
+
+export interface CashSessionReporte extends RowDataPacket {
+  id: string;
+  cash_register_id: string;
+  user_id: number | null;
+  user_name: string | null;
+  opened_at: string;
+  opening_amount: number;
+  closed_at: string | null;
+  expected_amount: number | null;
+  declared_amount: number | null;
+  difference: number | null;
+  status: "abierta" | "cerrada";
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface VentaRow extends RowDataPacket {
   idVenta: number;
   fechaHora: Date;

@@ -3,6 +3,16 @@ import type { RowDataPacket } from "mysql2";
 import { ProductoRow } from "@/types/mysqltypes";
 import { ProductoInsertRow } from "@/types/mysqltypes";
 import { ProductoBeneficioRow } from "@/types/mysqltypes";
+import { VistaProductos } from "@/types/mysqltypes";
+
+export async function getProductosReporte(): Promise<VistaProductos[]> {
+  console.log("🔵 [DB] Obteniendo productos para reportes");
+  const [rows] = await pool.query<VistaProductos[]>(
+    "SELECT idProducto AS id, idProducto AS code, nombreProducto AS name, cantidad AS stock, COALESCE(stockMin, 0) AS min_stock, 0 AS cost_price, pvp AS sale_price, TRUE AS active FROM v_productos ORDER BY nombreProducto",
+  );
+  console.log(`✅ [DB] Productos de reportes retornados: ${rows.length}`);
+  return rows;
+}
 
 export async function getProductos(sucursalId: string): Promise<ProductoRow[]> {
   console.log(`🔵 [DB] Obteniendo productos para la sucursal ${sucursalId}`);

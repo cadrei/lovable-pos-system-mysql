@@ -1,5 +1,10 @@
 import pool from "../../../database/mysqlpool";
-import { CashRegisterRow, CashSessionRow, CashMovementRow } from "@/types/mysqltypes";
+import {
+  CashRegisterRow,
+  CashSessionReporte,
+  CashSessionRow,
+  CashMovementRow,
+} from "@/types/mysqltypes";
 
 // Obtener la última sesión abierta
 export async function getSesionCaja(): Promise<CashSessionRow | null> {
@@ -74,6 +79,25 @@ export async function getSesionesCaja(): Promise<CashSessionSelect[]> {
   );
   console.log(`✅ [DB] Sesiones de caja retornadas: ${rows.length}`);
   return rows;
+}
+
+export async function getSesionesCajaReporte(
+  desde: string,
+  hasta: string,
+): Promise<CashSessionReporte[]> {
+  console.log("🔵 [DB] Obteniendo sesiones de caja para reportes");
+  const [rows] = await pool.query<CashSessionSelect[]>(
+    "SELECT id, cash_register_id, user_id, user_name, opened_at, opening_amount, closed_at, expected_amount, declared_amount, difference, status, notes, created_at, updated_at FROM cash_sessions WHERE opened_at >= ? AND opened_at <= ? ORDER BY opened_at DESC",
+    [desde, hasta],
+  );
+  console.log(`✅ [DB] Sesiones de caja de reportes retornadas: ${rows.length}`);
+  return rows.map((row) => ({
+    ...row,
+    opened_at: new Date(row.opened_at).toISOString(),
+    closed_at: row.closed_at ? new Date(row.closed_at).toISOString() : null,
+    created_at: new Date(row.created_at).toISOString(),
+    updated_at: new Date(row.updated_at).toISOString(),
+  }));
 }
 
 export async function insertSesionCaja(data: CashSessionInsert): Promise<number> {

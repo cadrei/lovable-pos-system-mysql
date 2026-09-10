@@ -38,7 +38,7 @@ const nav: { to: string; label: string; icon: LucideIcon; perm: string }[] = [
   /* { to: "/proveedores", label: "Proveedores", icon: Truck, perm: "proveedores.ver" }, */
   { to: "/reportes", label: "Reportes", icon: BarChart3, perm: "reportes.ver" },
   { to: "/seguridad", label: "Seguridad", icon: ShieldCheck, perm: "usuarios.ver" },
-  { to: "/configuracion", label: "Configuraci贸n", icon: Settings, perm: "configuracion.ver" },
+  { to: "/configuracion", label: "Configuración", icon: Settings, perm: "configuracion.ver" },
 ];
 
 export function AppShell({

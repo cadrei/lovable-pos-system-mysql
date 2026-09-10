@@ -16,9 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/use-session";
 import { fecha, fechaHora, money, num } from "@/lib/format";
+import { fnGetSesionesCajaReporte } from "@/server-functions/fncajaReporte";
+import { fnGetVistaDetalleVentasReporte } from "@/server-functions/fndetalleVistaVentas";
+import { fnPagosMetodoGet } from "@/server-functions/fnpagos";
+import { fnGetProductosReporte } from "@/server-functions/fnproductosReporte";
+import { fnGetVistaVentasReporte } from "@/server-functions/fnvistaVentas";
 
 export const Route = createFileRoute("/_authenticated/reportes")({
   head: () => ({
@@ -92,77 +96,48 @@ function Reportes() {
   const ventasQ = useQuery({
     queryKey: ["rep-ventas", desde, hasta],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("sales")
-        .select(
-          "id, number, created_at, total, subtotal, tax, discount, cost_total, status, user_name",
-        )
-        .gte("created_at", desde)
-        .lte("created_at", hasta)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const result = await fnGetVistaVentasReporte({ data: { desde, hasta } });
+      if (!result.success) throw new Error(result.error);
+      return result.data;
     },
   });
 
   const pagosQ = useQuery({
     queryKey: ["rep-pagos", desde, hasta],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("payments")
-        .select("method, amount, created_at")
-        .gte("created_at", desde)
-        .lte("created_at", hasta);
-      if (error) throw error;
-      return data;
+      const result = await fnPagosMetodoGet({ data: { desde, hasta } });
+      if (!result.success) throw new Error(result.error);
+      return result.data;
     },
   });
 
   const itemsQ = useQuery({
     queryKey: ["rep-items", desde, hasta],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("sale_items")
-        .select("description, quantity, total, unit_cost, sales!inner(created_at, status)")
-        .gte("sales.created_at", desde)
-        .lte("sales.created_at", hasta);
-      if (error) throw error;
-      return data as unknown as {
-        description: string;
-        quantity: number;
-        total: number;
-        unit_cost: number;
-        sales: { created_at: string; status: string };
-      }[];
+      const result = await fnGetVistaDetalleVentasReporte({ data: { desde, hasta } });
+      if (!result.success) throw new Error(result.error);
+      return result.data.map((item) => ({
+        ...item,
+        sales: { created_at: item.created_at, status: item.status },
+      }));
     },
   });
 
   const productosQ = useQuery({
     queryKey: ["rep-productos"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("id, code, name, stock, min_stock, cost_price, sale_price, active")
-        .eq("active", true)
-        .order("name");
-      if (error) throw error;
-      return data;
+      const result = await fnGetProductosReporte();
+      if (!result.success) throw new Error(result.error);
+      return result.data;
     },
   });
 
   const cajasQ = useQuery({
     queryKey: ["rep-caja", desde, hasta],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("cash_sessions")
-        .select(
-          "id, user_name, opened_at, closed_at, opening_amount, expected_amount, declared_amount, difference, status",
-        )
-        .gte("opened_at", desde)
-        .lte("opened_at", hasta)
-        .order("opened_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const result = await fnGetSesionesCajaReporte({ data: { desde, hasta } });
+      if (!result.success) throw new Error(result.error);
+      return result.data;
     },
   });
 
@@ -213,7 +188,7 @@ function Reportes() {
   const bajoMinimo = productos.filter((p) => Number(p.stock) <= Number(p.min_stock));
 
   const sesiones = cajasQ.data ?? [];
-  const puedeExportar = can("reports.export");
+  const puedeExportar = can("reportes.exportar");
 
   return (
     <AppShell

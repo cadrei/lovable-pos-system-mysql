@@ -88,10 +88,10 @@ export const fnUpdateSesionCaja = createServerFn({ method: "POST" })
     try {
       const result = await updateSesionCaja(data.id, {
         status: data.status,
-        closed_at: data.closed_at,
-        expected_amount: data.expected_amount,
-        declared_amount: data.declared_amount,
-        difference: data.difference,
+        ...(data.closed_at !== undefined && { closed_at: data.closed_at }),
+        ...(data.expected_amount !== undefined && { expected_amount: data.expected_amount }),
+        ...(data.declared_amount !== undefined && { declared_amount: data.declared_amount }),
+        ...(data.difference !== undefined && { difference: data.difference }),
       });
       return { success: true, data: result };
     } catch (error) {

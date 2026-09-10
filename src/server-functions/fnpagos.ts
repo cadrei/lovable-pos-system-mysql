@@ -1,6 +1,27 @@
 import { createServerFn } from "@tanstack/react-start";
-import { deletePago, getPagos, insertPago, updatePago } from "../integrations/mysql/pagos";
-import { PagoInsert, PagoSelect } from "../types/mysqltypes";
+import {
+  deletePago,
+  getPagos,
+  getPagosMetodo,
+  insertPago,
+  updatePago,
+} from "../integrations/mysql/pagos";
+import { PagoInsert, PagoSelect, PagosMetodo } from "../types/mysqltypes";
+
+export const fnPagosMetodoGet = createServerFn({ method: "POST" })
+  .validator((data: { desde: string; hasta: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const result: PagosMetodo[] = await getPagosMetodo(data.desde, data.hasta);
+      return { success: true, data: result };
+    } catch (error) {
+      console.error("❌ [fnPagosMetodoGet] Error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Error desconocido",
+      };
+    }
+  });
 
 export const fnPagosGet = createServerFn({ method: "GET" }).handler(async () => {
   try {
