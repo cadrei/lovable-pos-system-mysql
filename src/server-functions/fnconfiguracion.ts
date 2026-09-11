@@ -139,7 +139,7 @@ export const fnCfgSucursalesGet = createServerFn({ method: "GET" }).handler(asyn
     }));
     return { success: true, data: sucursales };
   } catch (error) {
-    console.error("❌ [fnCfgSucursalesGet] Error:", error);
+    console.error("❌ [fnconfiguracion.fnCfgSucursalesGet] Error:", error);
     return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
   }
 });

@@ -17,10 +17,7 @@ import { Button } from "@/components/ui/button";
 import { fechaHora, money } from "@/lib/format";
 import { useSession } from "@/hooks/use-session";
 import { panelFn } from "@/server-functions/fnpanel";
-import { sucursalesFn } from "@/server-functions/fnsucursales";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { VentaRow } from "@/types/mysqltypes";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/panel")({
   head: () => ({
@@ -59,11 +56,7 @@ function Panel() {
     enabled: !loading && !!session && !!sucursalId,
   });
 
-  const {
-    data: sucursales,
-    isLoading: isSucursalesLoading,
-    isError,
-  } = useQuery({
+  /* const { data: sucursales, isError: isSucursalesError } = useQuery({
     queryKey: ["sucursales"],
     queryFn: async () => {
       const result = await sucursalesFn();
@@ -78,6 +71,12 @@ function Panel() {
     },
     enabled: !loading && !!session,
   });
+
+  useEffect(() => {
+    if (isSucursalesError) {
+      toast.error("Error al cargar sucursales. Intenta nuevamente.");
+    }
+  }, [isSucursalesError]); */
 
   const [page, setPage] = useState(0);
 

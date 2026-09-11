@@ -21,25 +21,35 @@ export async function getSession(): Promise<SessionData | null> {
     const userRaw = localStorage.getItem("auth_user");
 
     if (!token || !userRaw) {
-      console.warn("⚠️ [Session] No hay sesión en localStorage");
+      console.log("🔵 [session.getSession] No hay sesión en localStorage", {
+        hasToken: Boolean(token),
+        hasUser: Boolean(userRaw),
+      });
       return null;
     }
 
-    const user = JSON.parse(userRaw);
-    console.log("✅ [Session] Sesión encontrada:", user.EMAIL);
+    const user = JSON.parse(userRaw) as SessionData["user"];
+    console.log("✅ [session.getSession] Sesión encontrada: ", { email: user.EMAIL });
 
     return { token, user };
-  } catch (err) {
-    console.error("❌ [Session] Error al leer sesión:", err);
-    return null;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("❌ [session.getSession] Error al leer sesión: ", { message });
+    throw new Error(`[session.getSession] ${message}`);
   }
 }
 
 /**
  * Elimina la sesión actual (logout).
  */
-export function clearSession() {
-  localStorage.removeItem("auth_token");
-  localStorage.removeItem("auth_user");
-  console.log("🔵 [Session] Sesión eliminada");
+export async function clearSession(): Promise<void> {
+  try {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
+    console.log("✅ [session.clearSession] Sesión eliminada", {});
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("❌ [session.clearSession] Error al eliminar sesión", { message });
+    throw new Error(`[session.clearSession] ${message}`);
+  }
 }

@@ -1,9 +1,8 @@
-import { createFileRoute, FileRoutesByPath } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { getBeneficiosFn } from "@/server-functions/fnbeneficios";
 import { getProdBenefFn } from "@/server-functions/fnproductosBeneficios";
 import { sucursalesFn } from "@/server-functions/fnsucursales";
-import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/AppShell";
 import {
   Command,
@@ -16,6 +15,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useQuery } from "@tanstack/react-query";
 import { BeneficioRow, ProductoBeneficioRow, SucursalRow } from "@/types/mysqltypes";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/productosBeneficios")({
   head: () => ({
@@ -83,9 +83,21 @@ function PRODBENEF() {
     enabled: !!selectedBeneficio || !!selectedSucursal, // solo ejecuta si hay beneficio seleccionado
   });
 
-  const productosFiltrados = productos.filter((p) =>
+  /* const productosFiltrados = productos.filter((p) =>
     p.producto.toLowerCase().includes(searchProducto.toLowerCase()),
-  );
+  ); */
+
+  useEffect(() => {
+    if (isErrorBeneficios) {
+      toast.error("Error al cargar beneficios. Intenta nuevamente.");
+    }
+    if (isErrorSucursales) {
+      toast.error("Error al cargar sucursales. Intenta nuevamente.");
+    }
+    if (isErrorProductos) {
+      toast.error("Error al cargar productos. Intenta nuevamente.");
+    }
+  }, [isErrorBeneficios, isErrorSucursales, isErrorProductos]);
 
   return (
     <AppShell
@@ -103,15 +115,21 @@ function PRODBENEF() {
             <CommandList>
               <CommandEmpty>No se encontraron resultados.</CommandEmpty>
               <CommandGroup>
-                {beneficios.map((b: BeneficioRow) => (
-                  <CommandItem
-                    key={b.idBeneficio}
-                    value={b.nombreBeneficio} // 👈 importante: usar el texto como value
-                    onSelect={() => setSelectedBeneficio(b.idBeneficio)}
-                  >
-                    {b.nombreBeneficio}
+                {isLoadingBeneficios ? (
+                  <CommandItem disabled value="loading">
+                    Cargando beneficios…
                   </CommandItem>
-                ))}
+                ) : (
+                  beneficios.map((b: BeneficioRow) => (
+                    <CommandItem
+                      key={b.idBeneficio}
+                      value={b.nombreBeneficio} // 👈 importante: usar el texto como value
+                      onSelect={() => setSelectedBeneficio(b.idBeneficio)}
+                    >
+                      {b.nombreBeneficio}
+                    </CommandItem>
+                  ))
+                )}
               </CommandGroup>
             </CommandList>
           </Command>
@@ -125,13 +143,21 @@ function PRODBENEF() {
             value={selectedSucursal}
             onChange={(e) => setSelectedSucursal(e.target.value)}
           >
-            <option value="">Seleccione una sucursal</option>
-            <option value="ALL">TODAS</option> {/* 👈 opción especial */}
-            {sucursales.map((s: SucursalRow) => (
-              <option key={s.ID_SUCURSAL} value={s.ID_SUCURSAL}>
-                {s.NOMBRE_SUCURSAL}
+            {isLoadingSucursales ? (
+              <option disabled value="loading">
+                Cargando sucursales…
               </option>
-            ))}
+            ) : (
+              <>
+                <option value="">Seleccione una sucursal</option>
+                <option value="ALL">TODAS</option> {/* 👈 opción especial */}
+                {sucursales.map((s: SucursalRow) => (
+                  <option key={s.ID_SUCURSAL} value={s.ID_SUCURSAL}>
+                    {s.NOMBRE_SUCURSAL}
+                  </option>
+                ))}
+              </>
+            )}
           </select>
         </div>
 

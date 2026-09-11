@@ -1,9 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Bot } from "lucide-react";
 import { toast } from "sonner";
-import { Bot } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +34,7 @@ import { insertProductoFn } from "@/server-functions/fnInsertProducto";
 import { ajustarInventarioFn } from "@/server-functions/fnAjustarInventario";
 import { getSubcategoriasFn } from "@/server-functions/fnGetSubcategorias";
 import { consultarGemini, consultarGeminiTest } from "@/server-functions/fngemini";
-import { ProductoInsertRow, CategoriaRow, SubcategoriaRow } from "@/types/mysqltypes";
+import { ProductoInsertRow } from "@/types/mysqltypes";
 
 export const Route = createFileRoute("/_authenticated/inventario")({
   head: () => ({
@@ -54,7 +53,7 @@ export const Route = createFileRoute("/_authenticated/inventario")({
 
 function Inventario() {
   const qc = useQueryClient();
-  const { nombre, sucursalId, can } = useSession();
+  const { sucursalId, can } = useSession();
   const [q, setQ] = useState("");
   const [abierto, setAbierto] = useState(false);
   const [ajuste, setAjuste] = useState<{
@@ -63,9 +62,8 @@ function Inventario() {
     CANTIDAD: number;
   } | null>(null);
   const [cantidadAjuste, setCantidadAjuste] = useState(0);
-  const [motivo, setMotivo] = useState("");
+  /* const [setMotivo] = useState(""); */
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("");
-  const [pregunta, setPregunta] = useState("");
   const [respuesta, setRespuesta] = useState("");
   const [loading, setLoading] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState<string>("");
@@ -74,7 +72,7 @@ function Inventario() {
     setLoading(true);
     setRespuesta("");
     try {
-      const promptIA = `Quiero un análisis detallado del producto ${productoSeleccionado}. 
+      const promptIALargo = `Quiero un análisis detallado del producto ${productoSeleccionado}. 
           Incluye:
           - Descripción completa
           - Beneficios principales
@@ -83,7 +81,10 @@ function Inventario() {
           - Rango de edad o perfil de usuario adecuado
           - Precauciones o contraindicaciones
           - Comparación con productos similares si aplica`;
-      const data = await consultarGemini({ data: { prompt: promptIA } });
+      const promptIACorto = `Dame un resumen breve con detalles, beneficios y forma de uso del producto ${productoSeleccionado}`;
+      console.log(promptIACorto);
+      console.log(promptIALargo);
+      const data = await consultarGemini({ data: { prompt: promptIACorto } });
       setRespuesta(data.output ?? "No hubo respuesta");
     } catch (err) {
       console.error("Error en consulta:", err);
@@ -178,6 +179,21 @@ function Inventario() {
     );
   })();
 
+  useEffect(() => {
+    if (isErrorProductos) {
+      toast.error("Error al cargar productos. Intenta nuevamente.");
+    }
+    if (isErrorCategorias) {
+      toast.error("Error al cargar categorías. Intenta nuevamente.");
+    }
+    if (isErrorSubcategorias) {
+      toast.error("Error al cargar subcategorías. Intenta nuevamente.");
+    }
+    if (isErrorMovimientos) {
+      toast.error("Error al cargar movimientos. Intenta nuevamente.");
+    }
+  }, [isErrorProductos, isErrorCategorias, isErrorSubcategorias, isErrorMovimientos]);
+
   const crearProducto = useMutation({
     mutationFn: async (form: ProductoInsertRow) => {
       const result = await insertProductoFn({ data: form });
@@ -229,7 +245,6 @@ function Inventario() {
       toast.success("Inventario ajustado");
       setAjuste(null);
       setCantidadAjuste(0);
-      setMotivo("");
       qc.invalidateQueries();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -287,11 +302,17 @@ function Inventario() {
                       <SelectValue placeholder="Selecciona categoría" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categorias.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
+                      {isLoadingCategorias ? (
+                        <SelectItem disabled value="loading">
+                          Cargando categorías…
                         </SelectItem>
-                      ))}
+                      ) : (
+                        categorias.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -308,13 +329,19 @@ function Inventario() {
                       <SelectValue placeholder="Selecciona subcategoría" />
                     </SelectTrigger>
                     <SelectContent>
-                      {subcategorias
-                        .filter((sc) => sc.ID_CATEGORIA === categoriaSeleccionada)
-                        .map((sc) => (
-                          <SelectItem key={sc.ID_SUBCATEGORIA} value={sc.ID_SUBCATEGORIA}>
-                            {sc.nombreSubcategoria}
-                          </SelectItem>
-                        ))}
+                      {isLoadingSubcategorias ? (
+                        <SelectItem disabled value="loading">
+                          Cargando subcategorías…
+                        </SelectItem>
+                      ) : (
+                        subcategorias
+                          .filter((sc) => sc.ID_CATEGORIA === categoriaSeleccionada)
+                          .map((sc) => (
+                            <SelectItem key={sc.ID_SUBCATEGORIA} value={sc.ID_SUBCATEGORIA}>
+                              {sc.nombreSubcategoria}
+                            </SelectItem>
+                          ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
