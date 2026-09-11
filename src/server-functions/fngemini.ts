@@ -12,16 +12,13 @@ export const consultarGemini = createServerFn({ method: "POST" })
       console.error("❌ No se recibió prompt en la request");
       return { output: "No se recibió prompt" };
     }
-
     const callGemini = async (model: string, lite: boolean = false): Promise<GeminiResponse> => {
       console.log(`🌐 Invocando al modelo ${model} con prompt:`, prompt);
-
       const body = buildGeminiBody(prompt, {
         temperature: 0.1,
         lite,
         ...(lite ? {} : { thinkingBudget: 0 }),
       });
-
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env["GEMINI_API_KEY"]}`,
         {
@@ -53,6 +50,27 @@ export const consultarGemini = createServerFn({ method: "POST" })
         return { output: "El modelo está saturado, intenta de nuevo más tarde." };
       }
     }
-
     return result;
+  });
+
+export const consultarGeminiTest = createServerFn({ method: "POST" })
+  .validator((data: GeminiRequest): GeminiRequest => data)
+  .handler(async ({ data }): Promise<GeminiResponse> => {
+    const prompt = data?.prompt;
+    console.log(`🌐 Invocando al modelo con prompt:`, prompt);
+    if (!prompt) {
+      console.error("❌ No se recibió prompt en la request");
+      return { output: "No se recibió prompt" };
+    }
+    const callGemini = async (model: string, lite: boolean = false): Promise<GeminiResponse> => {
+      console.log(`🌐 Invocando al modelo ${model} con prompt:`, prompt);
+      const body = buildGeminiBody(prompt, {
+        temperature: 0.1,
+        lite,
+        ...(lite ? {} : { thinkingBudget: 0 }),
+      });
+      const response = "Exito Total";
+      return { output: response };
+    };
+    return { output: "Exito Total" };
   });
