@@ -102,7 +102,7 @@ export async function login(email: string, password: string): Promise<AuthResult
     await pool.query("UPDATE USUARIOS SET ULTIMO_LOGIN = NOW() WHERE USER_ID = ?", [user.USER_ID]);
     console.log("🔵 [auth.login] Obteniendo permisos del usuario:", { userId: user.USER_ID });
     const permisos = await getPermisosUsuario(user.USER_ID);
-    console.log("✅ [auth.login] Permisos obtenidos:", { userId: user.USER_ID, permisos });
+    //console.log("✅ [auth.login] Permisos obtenidos:", { userId: user.USER_ID, permisos });
     console.log("🔵 [auth.login] Generando token JWT:", { userId: user.USER_ID });
     const token = jwt.sign(
       {
