@@ -2,6 +2,8 @@ import pool from "../../../database/mysqlpool";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import type { RowDataPacket } from "mysql2";
+import { AuditoriaUsuarioInsert } from "@/types/mysqltypes";
+import { insertAuditoriaUsuario } from "./auditoriaUsuarios";
 
 const JWT_SECRET = process.env["JWT_SECRET"] ?? "secret";
 
@@ -22,37 +24,86 @@ export interface AuthResult {
   user: UsuarioRow;
 }
 
+// Plantillas base de auditoría
+const auditoriaBase: AuditoriaUsuarioInsert = {
+  USER_ID: 0,
+  USER_EMAIL: "",
+  ACTION: "LOGIN",
+  MODULE: "AUTH",
+  ENTITY: "USUARIOS",
+  ENTITY_ID: null,
+  OLD_VALUE: null,
+  NEW_VALUE: null,
+  IP: null, // aquí puedes pasar la IP si la capturas en la request
+};
+// Plantilla: login fallido por usuario inexistente/inactivo
+const auditoriaLoginUsuarioNoEncontrado: AuditoriaUsuarioInsert = {
+  ...auditoriaBase,
+  ACTION: "LOGIN_FAIL",
+  NEW_VALUE: "Usuario no encontrado o inactivo",
+};
+
+// Plantilla: login fallido por contraseña incorrecta
+const auditoriaLoginPasswordIncorrecta: AuditoriaUsuarioInsert = {
+  ...auditoriaBase,
+  ACTION: "LOGIN_FAIL",
+  NEW_VALUE: "Contraseña incorrecta",
+};
+
+// Plantilla: login exitoso
+const auditoriaLoginExitoso: AuditoriaUsuarioInsert = {
+  ...auditoriaBase,
+  ACTION: "LOGIN_SUCCESS",
+  NEW_VALUE: "Usuario autenticado correctamente",
+};
+
+// Plantilla: error inesperado en login
+const auditoriaLoginError: AuditoriaUsuarioInsert = {
+  ...auditoriaBase,
+  ACTION: "LOGIN_ERROR",
+  NEW_VALUE: "Error inesperado en login",
+};
+
 export async function login(email: string, password: string): Promise<AuthResult> {
   try {
-    console.log("🔵 [auth.login] Ejecutando consulta de login con email: ", { email });
+    console.log("🔵 [auth.login] Ejecutando consulta de login con email:", { email });
     const [rows] = await pool.query<UsuarioRow[]>(
-      `SELECT u.USER_ID,u.NOMBRE,u.EMAIL,u.PASSWORD_HASH,u.ESTADO,e.ID_EMPLEADO,e.NOMBRES AS NOMBRE_EMPLEADO,s.ID_SUCURSAL,s.NOMBRE_SUCURSAL
+      `SELECT u.USER_ID,u.NOMBRE,u.EMAIL,u.PASSWORD_HASH,u.ESTADO,
+              e.ID_EMPLEADO,e.NOMBRES AS NOMBRE_EMPLEADO,
+              s.ID_SUCURSAL,s.NOMBRE_SUCURSAL
        FROM USUARIOS u
        JOIN EMPLEADO e ON u.ID_EMPLEADO = e.ID_EMPLEADO
        JOIN SUCURSALES s ON e.ID_SUCURSAL = s.ID_SUCURSAL
-       WHERE u.EMAIL = ?
-       AND U.ESTADO='A'`,
+       WHERE u.EMAIL = ? AND u.ESTADO='A'`,
       [email],
     );
     const user = rows[0];
     if (!user) {
-      console.error("❌ [auth.login] Usuario no encontrado o inactivo: ", { email });
+      console.error("❌ [auth.login] Usuario no encontrado o inactivo:", { email });
+      await insertAuditoriaUsuario({
+        ...auditoriaLoginUsuarioNoEncontrado,
+        USER_EMAIL: email,
+      });
       throw new Error("Usuario no encontrado o inactivo");
     }
-    console.log("🔵 [auth.login] Validando contraseña: ", { email });
+    console.log("🔵 [auth.login] Validando contraseña:", { email });
     const valid = await bcrypt.compare(password, user.PASSWORD_HASH);
     if (!valid) {
-      console.error("❌ [auth.login] Contraseña incorrecta para usuario: ", { email });
+      console.error("❌ [auth.login] Contraseña incorrecta para usuario:", { email });
+      await insertAuditoriaUsuario({
+        ...auditoriaLoginPasswordIncorrecta,
+        USER_ID: user.USER_ID,
+        USER_EMAIL: user.EMAIL,
+        ENTITY_ID: String(user.USER_ID),
+      });
       throw new Error("Contraseña incorrecta");
     }
-    console.log("🔵 [auth.login] Actualizando último login: ", { userId: user.USER_ID });
+    console.log("🔵 [auth.login] Actualizando último login:", { userId: user.USER_ID });
     await pool.query("UPDATE USUARIOS SET ULTIMO_LOGIN = NOW() WHERE USER_ID = ?", [user.USER_ID]);
-
-    // Obtener permisos
-    console.log("🔵 [auth.login] Obteniendo permisos del usuario: ", { userId: user.USER_ID });
+    console.log("🔵 [auth.login] Obteniendo permisos del usuario:", { userId: user.USER_ID });
     const permisos = await getPermisosUsuario(user.USER_ID);
-    console.log("✅ [auth.login] Permisos obtenidos: ", { userId: user.USER_ID, permisos });
-    console.log("🔵 [auth.login] Generando token JWT: ", { userId: user.USER_ID });
+    console.log("✅ [auth.login] Permisos obtenidos:", { userId: user.USER_ID, permisos });
+    console.log("🔵 [auth.login] Generando token JWT:", { userId: user.USER_ID });
     const token = jwt.sign(
       {
         USER_ID: user.USER_ID,
@@ -65,11 +116,22 @@ export async function login(email: string, password: string): Promise<AuthResult
       JWT_SECRET,
       { expiresIn: "1h" },
     );
-    console.log("✅ [auth.login] Login exitoso: ", { email });
+    console.log("✅ [auth.login] Login exitoso:", { email });
+    await insertAuditoriaUsuario({
+      ...auditoriaLoginExitoso,
+      USER_ID: user.USER_ID,
+      USER_EMAIL: user.EMAIL,
+      ENTITY_ID: String(user.USER_ID),
+    });
     return { token, user };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("❌ [auth.login] Error en login: ", { email, message });
+    console.error("❌ [auth.login] Error en login:", { email, message });
+    await insertAuditoriaUsuario({
+      ...auditoriaLoginError,
+      USER_EMAIL: email,
+      NEW_VALUE: message,
+    });
     throw new Error(`[auth.login] ${message}`);
   }
 }

@@ -782,6 +782,18 @@ export type AuditoriaUsuarioSelect = {
   FECHA_CREACION: Date;
 };
 
+export type AuditoriaUsuarioInsert = {
+  USER_ID: number;
+  USER_EMAIL: string;
+  ACTION: string;
+  MODULE: string;
+  ENTITY?: string | null;
+  ENTITY_ID?: string | null;
+  OLD_VALUE?: unknown;
+  NEW_VALUE?: unknown;
+  IP?: string | null;
+};
+
 export type UsuarioInsert = {
   ID_EMPLEADO?: number | null;
   NOMBRE: string;

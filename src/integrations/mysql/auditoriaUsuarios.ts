@@ -1,6 +1,6 @@
 import pool from "../../../database/mysqlpool";
 import type { ResultSetHeader } from "mysql2/promise";
-import { AuditoriaUsuarioRow } from "@/types/mysqltypes";
+import { AuditoriaUsuarioRow, AuditoriaUsuarioInsert } from "@/types/mysqltypes";
 
 export async function getAuditoriaUsuarios(): Promise<AuditoriaUsuarioRow[]> {
   console.log("🔵 [auditoriaUsuarios.getAuditoriaUsuarios] Obteniendo auditoria_usuarios...");
@@ -25,17 +25,7 @@ export async function getAuditoriaUsuarios(): Promise<AuditoriaUsuarioRow[]> {
   }
 }
 
-export async function insertAuditoriaUsuario(data: {
-  USER_ID: number;
-  USER_EMAIL: string;
-  ACTION: string;
-  MODULE: string;
-  ENTITY?: string | null;
-  ENTITY_ID?: string | null;
-  OLD_VALUE?: unknown;
-  NEW_VALUE?: unknown;
-  IP?: string | null;
-}): Promise<number> {
+export async function insertAuditoriaUsuario(data: AuditoriaUsuarioInsert): Promise<number> {
   console.log(
     `🔵 [auditoriaUsuarios.insertAuditoriaUsuario] Insertando auditoria_usuarios con: USER_ID=${data.USER_ID}, ACTION=${data.ACTION}, MODULE=${data.MODULE}`,
   );
@@ -65,7 +55,7 @@ export async function insertAuditoriaUsuario(data: {
     console.error(
       `❌ [auditoriaUsuarios.insertAuditoriaUsuario] Error insertando auditoria_usuarios: ${err instanceof Error ? "conocido" : "desconocido"}: ${message}`,
     );
-    throw new Error(message);
+    throw new Error(`[auditoriaUsuarios.insertAuditoriaUsuario] ${message}`);
   }
 }
 
