@@ -73,7 +73,7 @@ function Kpi({ label, value, hint }: { label: string; value: string; hint?: stri
 }
 
 function Reportes() {
-  const { can } = useSession();
+  const { can, sucursalId } = useSession();
   const [rango, setRango] = useState<string>("30");
   const [desdeManual, setDesdeManual] = useState("");
   const [hastaManual, setHastaManual] = useState("");
@@ -126,7 +126,7 @@ function Reportes() {
   const productosQ = useQuery({
     queryKey: ["rep-productos"],
     queryFn: async () => {
-      const result = await fnGetProductosReporte();
+      const result = await fnGetProductosReporte({ data: { sucursalId: sucursalId || "" } });
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
@@ -183,6 +183,22 @@ function Reportes() {
   }, [itemsQ.data]);
 
   const productos = productosQ.data ?? [];
+  const pageSize = 20;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.ceil(productos.length / pageSize);
+  const productosPagina = productos.slice((page - 1) * pageSize, page * pageSize); //paginacion productos reporte
+  // Función para calcular rango de páginas visibles
+  const getVisiblePages = () => {
+    const maxVisible = 5; // máximo de páginas visibles
+    let start = Math.max(1, page);
+    const end = Math.min(totalPages, start + maxVisible - 1);
+    // Ajustar si estamos cerca del final
+    if (end - start < maxVisible - 1) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  };
+
   const valorCosto = productos.reduce((a, p) => a + Number(p.stock) * Number(p.cost_price), 0);
   const valorVenta = productos.reduce((a, p) => a + Number(p.stock) * Number(p.sale_price), 0);
   const bajoMinimo = productos.filter((p) => Number(p.stock) <= Number(p.min_stock));
@@ -241,7 +257,7 @@ function Reportes() {
         <Tabs defaultValue="ventas">
           <TabsList>
             <TabsTrigger value="ventas">Ventas</TabsTrigger>
-            <TabsTrigger value="productos">Productos</TabsTrigger>
+            <TabsTrigger value="productos">Categorias</TabsTrigger>
             <TabsTrigger value="inventario">Inventario</TabsTrigger>
             <TabsTrigger value="caja">Caja</TabsTrigger>
           </TabsList>
@@ -348,7 +364,7 @@ function Reportes() {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  descargarCsv("productos-vendidos", [
+                  descargarCsv("categoria-vendidos", [
                     ["Producto", "Cantidad", "Importe", "Utilidad"],
                     ...topProductos.map((p) => [
                       p.nombre,
@@ -366,7 +382,7 @@ function Reportes() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
                   <tr>
-                    <th className="p-3">Producto</th>
+                    <th className="p-3">Categoria</th>
                     <th className="text-right">Cantidad</th>
                     <th className="text-right">Importe</th>
                     <th className="pr-3 text-right">Utilidad</th>
@@ -376,7 +392,7 @@ function Reportes() {
                   {topProductos.map((p) => (
                     <tr key={p.nombre} className="border-t border-border">
                       <td className="p-3 font-medium">{p.nombre}</td>
-                      <td className="text-right">{num(p.cantidad, 2)}</td>
+                      <td className="text-right">{num(p.cantidad, 0)}</td>
                       <td className="text-right">{money(p.importe)}</td>
                       <td className="pr-3 text-right text-muted-foreground">{money(p.utilidad)}</td>
                     </tr>
@@ -437,23 +453,93 @@ function Reportes() {
                   </tr>
                 </thead>
                 <tbody>
-                  {productos.map((p) => (
+                  {productosPagina.map((p) => (
                     <tr key={p.id} className="border-t border-border">
                       <td className="p-3 font-mono text-xs">{p.code}</td>
                       <td className="font-medium">{p.name}</td>
                       <td
-                        className={`text-right ${Number(p.stock) <= Number(p.min_stock) ? "font-semibold text-destructive" : ""}`}
+                        className={`text-right ${
+                          Number(p.stock) <= Number(p.min_stock)
+                            ? "font-semibold text-destructive"
+                            : ""
+                        }`}
                       >
-                        {num(p.stock, 2)}
+                        {num(p.stock, 0)}
                       </td>
-                      <td className="text-right text-muted-foreground">{num(p.min_stock, 2)}</td>
+                      <td className="text-right text-muted-foreground">{num(p.min_stock, 0)}</td>
                       <td className="pr-3 text-right">
                         {money(Number(p.stock) * Number(p.cost_price))}
                       </td>
                     </tr>
                   ))}
+                  {productosPagina.length === 0 && (
+                    <tr>
+                      <td className="p-3 text-muted-foreground" colSpan={5}>
+                        Sin productos en esta página.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
+            </div>
+            {/* Controles de paginación */}
+            <div className="flex justify-center items-center mt-4 space-x-2 text-sm">
+              <button
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+                className="px-2 py-1 border rounded disabled:opacity-50"
+              >
+                ←
+              </button>
+
+              {/* Mostrar primera página y puntos suspensivos si corresponde */}
+              {page > 2 && (
+                <>
+                  <button
+                    onClick={() => setPage(1)}
+                    className={`px-3 py-1 border rounded ${page === 1 ? "bg-primary text-white" : "bg-card"}`}
+                  >
+                    1
+                  </button>
+                  {page > 3 && <span className="px-2">...</span>}
+                </>
+              )}
+
+              {/* Páginas visibles */}
+              {getVisiblePages().map((num) => (
+                <button
+                  key={num}
+                  onClick={() => setPage(num)}
+                  className={`px-3 py-1 border rounded ${
+                    page === num ? "bg-primary text-white" : "bg-card"
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+
+              {/* Mostrar última página y puntos suspensivos si corresponde */}
+              {page < totalPages - 1 && (
+                <>
+                  {page < totalPages - 2 && <span className="px-2">...</span>}
+                  <button
+                    onClick={() => setPage(totalPages)}
+                    className={`px-3 py-1 border rounded ${
+                      page === totalPages ? "bg-primary text-white" : "bg-card"
+                    }`}
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+
+              <button
+                disabled={page === totalPages}
+                onClick={() => setPage(page + 1)}
+                className="px-2 py-1 border rounded disabled:opacity-50"
+              >
+                →
+              </button>
             </div>
           </TabsContent>
 

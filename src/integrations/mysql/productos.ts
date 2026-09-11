@@ -5,17 +5,22 @@ import { ProductoInsertRow } from "@/types/mysqltypes";
 import { ProductoBeneficioRow } from "@/types/mysqltypes";
 import { VistaProductos } from "@/types/mysqltypes";
 
-export async function getProductosReporte(): Promise<VistaProductos[]> {
-  console.log("🔵 [DB] Obteniendo productos para reportes");
+export async function getProductosReporte(sucursalId: string): Promise<VistaProductos[]> {
+  console.log("🔵 [productos.ts] Obteniendo productos para reportes");
   const [rows] = await pool.query<VistaProductos[]>(
-    "SELECT idProducto AS id, idProducto AS code, nombreProducto AS name, cantidad AS stock, COALESCE(stockMin, 0) AS min_stock, 0 AS cost_price, pvp AS sale_price, TRUE AS active FROM v_productos ORDER BY nombreProducto",
+    `SELECT idProducto AS id, idProducto AS code, nombreProducto AS name, cantidad AS stock, COALESCE(stockMin, 0) AS min_stock, 
+      0 AS cost_price, pvp AS sale_price, TRUE AS active 
+      FROM v_productos 
+      WHERE idSucursal = ?
+      ORDER BY nombreProducto`,
+    [sucursalId],
   );
   console.log(`✅ [DB] Productos de reportes retornados: ${rows.length}`);
   return rows;
 }
 
 export async function getProductos(sucursalId: string): Promise<ProductoRow[]> {
-  console.log(`🔵 [DB] Obteniendo productos para la sucursal ${sucursalId}`);
+  console.log(`🔵 [productos.ts] Obteniendo productos para la sucursal ${sucursalId}`);
   const [productos] = await pool.query<(ProductoRow & RowDataPacket)[]>(
     "SELECT * FROM v_productos WHERE idSucursal = ? AND CANTIDAD > 0",
     [sucursalId],
@@ -29,7 +34,7 @@ export async function getProductosBeneficio(
   sucursalId: string,
 ): Promise<ProductoBeneficioRow[]> {
   console.log(
-    `🔵 [DB] Obteniendo productos para el beneficio ${beneficioId} y la sucursal ${sucursalId}`,
+    `🔵 [productos.ts] Obteniendo productos para el beneficio ${beneficioId} y la sucursal ${sucursalId}`,
   );
 
   let sql = `
