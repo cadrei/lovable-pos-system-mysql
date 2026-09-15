@@ -6,6 +6,7 @@ import {
   ProductoRow,
   ProductoSelect,
   VistaProductos,
+  VistaProductoRow,
 } from "@/types/mysqltypes";
 
 export async function getProductosReporte(sucursalId: string): Promise<VistaProductos[]> {
@@ -118,6 +119,37 @@ export async function getProductosBeneficio(
     throw new Error(
       `[productos.getProductosBeneficio] Error desconocido al obtener productos por beneficio: ${String(err)}`,
     );
+  }
+}
+
+export async function getProductosVista(idSucursal: string = "SUC07"): Promise<VistaProductoRow[]> {
+  console.log(
+    `🔵 [productos.getProductosVista] Obteniendo productos para sucursal: idSucursal=${idSucursal}`,
+  );
+  try {
+    const [rows] = await pool.query<(VistaProductoRow & RowDataPacket)[]>(
+      `SELECT v.idProducto,v.idSucursal,v.nombreSucursal,v.nombreProducto,v.pvp,v.descripcion,v.idsubcategoria,v.categoria,v.subcategoria,v.etiquetas,v.unidadMedida,v.pesoVolumen,v.idStockMinimo,v.stockMin,v.idStockMax,v.stockMaximo,v.cantidad 
+       FROM v_productos V
+       WHERE v.idsucursal=?
+       AND EXISTS (SELECT 1 FROM IMAGENES_PRODUCTO I WHERE I.ID_PRODUCTO = V.idProducto AND I.ESTADO = 'A')`,
+      [idSucursal],
+    );
+    console.log(
+      `✅ [productos.getProductosVista] Éxito al obtener productos: ${rows.length} registros`,
+    );
+    return rows.map((row) => ({
+      ...row,
+      pvp: row.pvp == null ? null : Number(row.pvp),
+      stockMin: row.stockMin == null ? null : Number(row.stockMin),
+      stockMaximo: row.stockMaximo == null ? null : Number(row.stockMaximo),
+      cantidad: row.cantidad == null ? null : Number(row.cantidad),
+    }));
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(
+      `❌ [productos.getProductosVista] Error al obtener productos ${err instanceof Error ? "conocido" : "desconocido"}: ${message}`,
+    );
+    throw new Error(message);
   }
 }
 

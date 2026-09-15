@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedCajaRouteImport } from './routes/_authenticated/caja'
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
 import { Route as AuthenticatedConfiguracionRouteImport } from './routes/_authenticated/configuracion'
+import { Route as AuthenticatedGaleriaRouteImport } from './routes/_authenticated/galeria'
 import { Route as AuthenticatedInventarioRouteImport } from './routes/_authenticated/inventario'
 import { Route as AuthenticatedPanelRouteImport } from './routes/_authenticated/panel'
 import { Route as AuthenticatedProductosBeneficiosRouteImport } from './routes/_authenticated/productosBeneficios'
@@ -52,6 +53,11 @@ const AuthenticatedConfiguracionRoute =
     path: '/configuracion',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedGaleriaRoute = AuthenticatedGaleriaRouteImport.update({
+  id: '/galeria',
+  path: '/galeria',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedInventarioRoute = AuthenticatedInventarioRouteImport.update({
   id: '/inventario',
   path: '/inventario',
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/caja': typeof AuthenticatedCajaRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/galeria': typeof AuthenticatedGaleriaRoute
   '/inventario': typeof AuthenticatedInventarioRoute
   '/panel': typeof AuthenticatedPanelRoute
   '/productosBeneficios': typeof AuthenticatedProductosBeneficiosRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/caja': typeof AuthenticatedCajaRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/galeria': typeof AuthenticatedGaleriaRoute
   '/inventario': typeof AuthenticatedInventarioRoute
   '/panel': typeof AuthenticatedPanelRoute
   '/productosBeneficios': typeof AuthenticatedProductosBeneficiosRoute
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/_authenticated/caja': typeof AuthenticatedCajaRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
   '/_authenticated/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/_authenticated/galeria': typeof AuthenticatedGaleriaRoute
   '/_authenticated/inventario': typeof AuthenticatedInventarioRoute
   '/_authenticated/panel': typeof AuthenticatedPanelRoute
   '/_authenticated/productosBeneficios': typeof AuthenticatedProductosBeneficiosRoute
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/caja'
     | '/clientes'
     | '/configuracion'
+    | '/galeria'
     | '/inventario'
     | '/panel'
     | '/productosBeneficios'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
     | '/caja'
     | '/clientes'
     | '/configuracion'
+    | '/galeria'
     | '/inventario'
     | '/panel'
     | '/productosBeneficios'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/_authenticated/caja'
     | '/_authenticated/clientes'
     | '/_authenticated/configuracion'
+    | '/_authenticated/galeria'
     | '/_authenticated/inventario'
     | '/_authenticated/panel'
     | '/_authenticated/productosBeneficios'
@@ -218,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConfiguracionRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/galeria': {
+      id: '/_authenticated/galeria'
+      path: '/galeria'
+      fullPath: '/galeria'
+      preLoaderRoute: typeof AuthenticatedGaleriaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/inventario': {
       id: '/_authenticated/inventario'
       path: '/inventario'
@@ -267,6 +286,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCajaRoute: typeof AuthenticatedCajaRoute
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRoute
   AuthenticatedConfiguracionRoute: typeof AuthenticatedConfiguracionRoute
+  AuthenticatedGaleriaRoute: typeof AuthenticatedGaleriaRoute
   AuthenticatedInventarioRoute: typeof AuthenticatedInventarioRoute
   AuthenticatedPanelRoute: typeof AuthenticatedPanelRoute
   AuthenticatedProductosBeneficiosRoute: typeof AuthenticatedProductosBeneficiosRoute
@@ -279,6 +299,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCajaRoute: AuthenticatedCajaRoute,
   AuthenticatedClientesRoute: AuthenticatedClientesRoute,
   AuthenticatedConfiguracionRoute: AuthenticatedConfiguracionRoute,
+  AuthenticatedGaleriaRoute: AuthenticatedGaleriaRoute,
   AuthenticatedInventarioRoute: AuthenticatedInventarioRoute,
   AuthenticatedPanelRoute: AuthenticatedPanelRoute,
   AuthenticatedProductosBeneficiosRoute: AuthenticatedProductosBeneficiosRoute,

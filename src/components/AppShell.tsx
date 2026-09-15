@@ -13,6 +13,7 @@ import {
   Users,
   Wallet,
   Search,
+  Image,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -24,6 +25,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const nav: { to: string; label: string; icon: LucideIcon; perm: string }[] = [
   { to: "/panel", label: "Panel", icon: LayoutDashboard, perm: "ventas.ver" },
+  { to: "/galeria", label: "Galeria", icon: Image, perm: "inventario.ver" },
   { to: "/ventas", label: "Ventas (POS)", icon: ScanLine, perm: "ventas.crear" },
   /* { to: "/facturacion", label: "Facturación", icon: Receipt, perm: "facturacion.ver" }, */
   { to: "/inventario", label: "Inventario", icon: Boxes, perm: "inventario.ver" },
