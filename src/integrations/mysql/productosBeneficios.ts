@@ -6,25 +6,49 @@ import { ProductoBeneficioInsert, ProductoBeneficioSelect } from "@/types/mysqlt
 export async function getProductosBeneficios(
   productoId?: string,
 ): Promise<ProductoBeneficioSelect[]> {
-  console.log("🔵 [DB] Obteniendo relaciones producto-beneficio");
-  const [rows] = await pool.query<(ProductoBeneficioSelect & RowDataPacket)[]>(
-    productoId
-      ? "SELECT ID_PRODUCTO, ID_SINT_BENEF, ESTADO, FECHA_CREACION, FECHA_ACTUALIZACION FROM PRODUCTOS_BENEFICIOS WHERE ID_PRODUCTO = ?"
-      : "SELECT ID_PRODUCTO, ID_SINT_BENEF, ESTADO, FECHA_CREACION, FECHA_ACTUALIZACION FROM PRODUCTOS_BENEFICIOS",
-    productoId ? [productoId] : [],
+  console.log(
+    `🔵 [productosBeneficios.getProductosBeneficios] Obteniendo productos beneficios: productoId=${productoId ?? "todos"}`,
   );
-  console.log(`✅ [DB] Relaciones producto-beneficio retornadas: ${rows.length}`);
-  return rows;
+  try {
+    const [rows] = await pool.query<(ProductoBeneficioSelect & RowDataPacket)[]>(
+      productoId
+        ? "SELECT ID_PRODUCTO, ID_SINT_BENEF, ESTADO, FECHA_CREACION, FECHA_ACTUALIZACION FROM PRODUCTOS_BENEFICIOS WHERE ID_PRODUCTO = ?"
+        : "SELECT ID_PRODUCTO, ID_SINT_BENEF, ESTADO, FECHA_CREACION, FECHA_ACTUALIZACION FROM PRODUCTOS_BENEFICIOS",
+      productoId ? [productoId] : [],
+    );
+    console.log(
+      `✅ [productosBeneficios.getProductosBeneficios] Éxito obteniendo productos beneficios: ${rows.length} registros`,
+    );
+    return rows;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(
+      `❌ [productosBeneficios.getProductosBeneficios] Error obteniendo productos beneficios: ${err instanceof Error ? "conocido" : "desconocido"}: ${message}`,
+    );
+    throw new Error(message);
+  }
 }
 
 export async function insertProductoBeneficio(data: ProductoBeneficioInsert): Promise<number> {
-  console.log("🔵 [DB] Insertando relación producto-beneficio");
-  const [result] = await pool.query<ResultSetHeader>(
-    "INSERT INTO PRODUCTOS_BENEFICIOS (ID_PRODUCTO, ID_SINT_BENEF, ESTADO) VALUES (?, ?, ?)",
-    [data.ID_PRODUCTO, data.ID_SINT_BENEF, data.ESTADO ?? "A"],
+  console.log(
+    `🔵 [productosBeneficios.insertProductoBeneficio] Insertando en productos beneficios con: productoId=${data.ID_PRODUCTO}, beneficioId=${data.ID_SINT_BENEF}`,
   );
-  console.log(`✅ [DB] Registros afectados: ${result.affectedRows}`);
-  return result.affectedRows;
+  try {
+    const [result] = await pool.query<ResultSetHeader>(
+      "INSERT INTO PRODUCTOS_BENEFICIOS (ID_PRODUCTO, ID_SINT_BENEF, ESTADO) VALUES (?, ?, ?)",
+      [data.ID_PRODUCTO, data.ID_SINT_BENEF, data.ESTADO ?? "A"],
+    );
+    console.log(
+      `✅ [productosBeneficios.insertProductoBeneficio] Éxito insertando en productos beneficios: afectados=${result.affectedRows}`,
+    );
+    return result.affectedRows;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(
+      `❌ [productosBeneficios.insertProductoBeneficio] Error en productos beneficios: ${err instanceof Error ? "conocido" : "desconocido"}: ${message}`,
+    );
+    throw new Error(message);
+  }
 }
 
 export async function updateProductoBeneficio(
@@ -32,24 +56,48 @@ export async function updateProductoBeneficio(
   beneficioId: string,
   estado: string,
 ): Promise<number> {
-  console.log(`🔵 [DB] Actualizando relación producto-beneficio ${productoId}/${beneficioId}`);
-  const [result] = await pool.query<ResultSetHeader>(
-    "UPDATE PRODUCTOS_BENEFICIOS SET ESTADO = ? WHERE ID_PRODUCTO = ? AND ID_SINT_BENEF = ?",
-    [estado, productoId, beneficioId],
+  console.log(
+    `🔵 [productosBeneficios.updateProductoBeneficio] Actualizando en productos beneficios con: productoId=${productoId}, beneficioId=${beneficioId}, estado=${estado}`,
   );
-  console.log(`✅ [DB] Registros afectados: ${result.affectedRows}`);
-  return result.affectedRows;
+  try {
+    const [result] = await pool.query<ResultSetHeader>(
+      "UPDATE PRODUCTOS_BENEFICIOS SET ESTADO = ? WHERE ID_PRODUCTO = ? AND ID_SINT_BENEF = ?",
+      [estado, productoId, beneficioId],
+    );
+    console.log(
+      `✅ [productosBeneficios.updateProductoBeneficio] Éxito actualizando en productos beneficios: afectados=${result.affectedRows}`,
+    );
+    return result.affectedRows;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(
+      `❌ [productosBeneficios.updateProductoBeneficio] Error actualizando en productos beneficios: ${err instanceof Error ? "conocido" : "desconocido"}: ${message}`,
+    );
+    throw new Error(message);
+  }
 }
 
 export async function deleteProductoBeneficio(
   productoId: string,
   beneficioId: string,
 ): Promise<number> {
-  console.log(`🔵 [DB] Eliminando relación producto-beneficio ${productoId}/${beneficioId}`);
-  const [result] = await pool.query<ResultSetHeader>(
-    "DELETE FROM PRODUCTOS_BENEFICIOS WHERE ID_PRODUCTO = ? AND ID_SINT_BENEF = ?",
-    [productoId, beneficioId],
+  console.log(
+    `🔵 [productosBeneficios.deleteProductoBeneficio] Eliminando en productos beneficios con: productoId=${productoId}, beneficioId=${beneficioId}`,
   );
-  console.log(`✅ [DB] Registros afectados: ${result.affectedRows}`);
-  return result.affectedRows;
+  try {
+    const [result] = await pool.query<ResultSetHeader>(
+      "DELETE FROM PRODUCTOS_BENEFICIOS WHERE ID_PRODUCTO = ? AND ID_SINT_BENEF = ?",
+      [productoId, beneficioId],
+    );
+    console.log(
+      `✅ [productosBeneficios.deleteProductoBeneficio] Éxito eliminando en productos beneficios: afectados=${result.affectedRows}`,
+    );
+    return result.affectedRows;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(
+      `❌ [productosBeneficios.deleteProductoBeneficio] Error eliminando en productos beneficios: ${err instanceof Error ? "conocido" : "desconocido"}: ${message}`,
+    );
+    throw new Error(message);
+  }
 }

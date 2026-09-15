@@ -267,7 +267,7 @@ function Configuracion() {
 
   return (
     <AppShell title="Configuración" subtitle="Empresa, sucursales, catálogos y parámetros">
-      <Tabs defaultValue="empresa">
+      <Tabs defaultValue="empresa" className="w-full overflow-x-auto">
         <TabsList>
           <TabsTrigger value="empresa">Empresa</TabsTrigger>
           <TabsTrigger value="sucursales">Sucursales y cajas</TabsTrigger>

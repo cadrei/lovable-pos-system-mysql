@@ -21,6 +21,27 @@ export interface ProductoRow extends RowDataPacket {
   cantidad: number;
 }
 
+//Vista Productos
+export type VistaProductoRow = {
+  idProducto: string;
+  idSucursal: string;
+  nombreSucursal: string;
+  nombreProducto: string;
+  pvp: number | null;
+  descripcion: string | null;
+  idSubcategoria: string | null;
+  categoria: string | null;
+  subcategoria: string | null;
+  etiquetas: string | null;
+  unidadMedida: string | null;
+  pesoVolumen: string | null;
+  idStockMinimo: string | null;
+  stockMin: number | null;
+  idStockMax: string | null;
+  stockMaximo: number | null;
+  cantidad: number | null;
+};
+
 //Productos Beneficios
 export interface ProductoBeneficioRow extends RowDataPacket {
   producto: string;
@@ -30,6 +51,16 @@ export interface ProductoBeneficioRow extends RowDataPacket {
   unidad_medida: string;
   peso_volumen: string;
   descripcion: string;
+}
+
+//Imagenes Producto
+export interface ImagenesProductoRow extends RowDataPacket {
+  idImagen: string;
+  idProducto: string;
+  urlImagen: string;
+  descripcion: string | null;
+  orden: number;
+  estado: string;
 }
 
 //Beneficios
@@ -780,6 +811,18 @@ export type AuditoriaUsuarioSelect = {
   NEW_VALUE: string | null;
   IP: string | null;
   FECHA_CREACION: Date;
+};
+
+export type AuditoriaUsuarioInsert = {
+  USER_ID: number;
+  USER_EMAIL: string;
+  ACTION: string;
+  MODULE: string;
+  ENTITY?: string | null;
+  ENTITY_ID?: string | null;
+  OLD_VALUE?: unknown;
+  NEW_VALUE?: unknown;
+  IP?: string | null;
 };
 
 export type UsuarioInsert = {

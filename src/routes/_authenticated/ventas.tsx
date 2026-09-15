@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSession } from "@/hooks/use-session";
-import { IVA, money } from "@/lib/format";
+import { money } from "@/lib/format";
 import { getProductosFn } from "@/server-functions/fnproductos";
 import { getClientesFn } from "@/server-functions/fnGetClientes";
 import { getSesionCajaFn } from "@/server-functions/fncajaSesion";
@@ -72,11 +72,7 @@ function POS() {
     return () => window.removeEventListener("keydown", h);
   }, []);
 
-  const {
-    data: productos = [],
-    isLoading: isLoadingProductos,
-    isError: isErrorProductos,
-  } = useQuery({
+  const { data: productos = [] } = useQuery({
     queryKey: ["pos-productos", sucursalId], // ✅ incluimos sucursalId en la key
     queryFn: async () => {
       if (!sucursalId) {
@@ -89,11 +85,7 @@ function POS() {
     enabled: !!sucursalId, // ✅ solo ejecuta si hay sucursal
   });
 
-  const {
-    data: clientes = [],
-    isLoading: isLoadingClientes,
-    isError: isErrorClientes,
-  } = useQuery({
+  const { data: clientes = [] } = useQuery({
     queryKey: ["pos-clientes"],
     queryFn: async () => {
       const result = await getClientesFn();
