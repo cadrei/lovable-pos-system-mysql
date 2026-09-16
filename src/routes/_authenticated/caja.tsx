@@ -15,9 +15,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/use-session";
 import { fechaHora, money } from "@/lib/format";
+import { fnCashRegistersGet } from "@/server-functions/fncashRegisters";
+import {
+  fnSesionesCajaGet,
+  getSesionCajaFn,
+  fnSesionCajaInsert,
+  fnUpdateSesionCaja,
+} from "@/server-functions/fncajaSesion";
+import { getMovimientosCajaFn, fnInsertMovimientoCaja } from "@/server-functions/fncajaMovimientos";
+import type { CashRegisterSelect, CashMovementRow, CashSessionSelect } from "@/types/mysqltypes";
 
 export const Route = createFileRoute("/_authenticated/caja")({
   head: () => ({
@@ -46,56 +54,51 @@ function Caja() {
     concepto: "",
   });
 
-  const { data: cajas = [] } = useQuery({
+  const { data: cajas = [] } = useQuery<CashRegisterSelect[]>({
     queryKey: ["cajas"],
-    queryFn: async () =>
-      (
-        await supabase
-          .from("cash_registers")
-          .select("id, name, code")
-          .eq("active", true)
-          .order("code")
-      ).data ?? [],
+    queryFn: async () => {
+      const result = await fnCashRegistersGet();
+      if (!result.success) throw new Error(result.error);
+      return (result.data ?? []).filter((c) => c.active);
+    },
   });
 
-  const { data: sesion } = useQuery({
+  const { data: sesion } = useQuery<CashSessionSelect | null>({
     queryKey: ["caja-abierta"],
-    queryFn: async () =>
-      (
-        await supabase
-          .from("cash_sessions")
-          .select("*, cash_registers(name)")
-          .eq("status", "abierta")
-          .order("opened_at", { ascending: false })
-          .limit(1)
-          .maybeSingle()
-      ).data,
+    queryFn: async () => {
+      const result = await getSesionCajaFn();
+      if (!result.success) throw new Error(result.error);
+      // Convertir CashSessionRow a CashSessionSelect
+      const data = result.data;
+      if (!data) return null;
+      return {
+        ...data,
+        user_id: data.user_id ? parseInt(data.user_id) : null,
+      } as CashSessionSelect;
+    },
   });
 
-  const { data: movimientos = [] } = useQuery({
+  const { data: movimientos = [] } = useQuery<CashMovementRow[]>({
     queryKey: ["caja-movimientos", sesion?.id],
     enabled: !!sesion?.id,
-    queryFn: async () =>
-      (
-        await supabase
-          .from("cash_movements")
-          .select("*")
-          .eq("cash_session_id", sesion!.id)
-          .order("created_at", { ascending: false })
-      ).data ?? [],
+    queryFn: async () => {
+      if (!sesion?.id) return [];
+      const result = await getMovimientosCajaFn({ data: { sessionId: sesion.id } });
+      if (!result.success) throw new Error(result.error);
+      return result.data ?? [];
+    },
   });
 
-  const { data: historial = [] } = useQuery({
+  const { data: historial = [] } = useQuery<CashSessionSelect[]>({
     queryKey: ["caja-historial"],
-    queryFn: async () =>
-      (
-        await supabase
-          .from("cash_sessions")
-          .select("*, cash_registers(name)")
-          .eq("status", "cerrada")
-          .order("closed_at", { ascending: false })
-          .limit(15)
-      ).data ?? [],
+    queryFn: async () => {
+      const result = await fnSesionesCajaGet();
+      if (!result.success) throw new Error(result.error);
+      return (result.data ?? [])
+        .filter((s) => s.status === "cerrada")
+        .sort((a, b) => new Date(b.closed_at ?? 0).getTime() - new Date(a.closed_at ?? 0).getTime())
+        .slice(0, 15);
+    },
   });
 
   const entradas = movimientos
@@ -109,18 +112,31 @@ function Caja() {
   const abrir = useMutation({
     mutationFn: async () => {
       if (!cajaId) throw new Error("Selecciona una caja");
-      const { data, error } = await supabase
-        .from("cash_sessions")
-        .insert({ cash_register_id: cajaId, user_name: nombre, opening_amount: montoApertura })
-        .select("id")
-        .single();
-      if (error) throw error;
-      await supabase.from("cash_movements").insert({
-        cash_session_id: data.id,
-        type: "apertura",
-        amount: montoApertura,
-        concept: "Apertura de caja",
+      const id = crypto.randomUUID();
+      const result = await fnSesionCajaInsert({
+        data: {
+          id,
+          cash_register_id: cajaId,
+          user_name: nombre || null,
+          opening_amount: montoApertura,
+          status: "abierta",
+          notes: null,
+        },
       });
+      if (!result.success) throw new Error(result.error);
+
+      const movResult = await fnInsertMovimientoCaja({
+        data: {
+          id: crypto.randomUUID(),
+          cash_session_id: id,
+          type: "apertura",
+          amount: montoApertura,
+          concept: "Apertura de caja",
+          reference: null,
+          user_id: null,
+        },
+      });
+      if (!movResult.success) throw new Error(movResult.error);
     },
     onSuccess: () => {
       toast.success("Caja abierta");
@@ -132,13 +148,18 @@ function Caja() {
   const registrar = useMutation({
     mutationFn: async () => {
       if (!sesion?.id) throw new Error("No hay caja abierta");
-      const { error } = await supabase.from("cash_movements").insert({
-        cash_session_id: sesion.id,
-        type: mov.tipo,
-        amount: mov.monto,
-        concept: mov.concepto || mov.tipo,
+      const result = await fnInsertMovimientoCaja({
+        data: {
+          id: crypto.randomUUID(),
+          cash_session_id: sesion.id,
+          type: mov.tipo === "ingreso" ? "ingreso" : mov.tipo === "egreso" ? "egreso" : "retiro",
+          amount: mov.monto,
+          concept: mov.concepto || mov.tipo,
+          reference: null,
+          user_id: null,
+        },
       });
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
     },
     onSuccess: () => {
       toast.success("Movimiento registrado");
@@ -151,17 +172,17 @@ function Caja() {
   const cerrar = useMutation({
     mutationFn: async () => {
       if (!sesion?.id) throw new Error("No hay caja abierta");
-      const { error } = await supabase
-        .from("cash_sessions")
-        .update({
+      const result = await fnUpdateSesionCaja({
+        data: {
+          id: sesion.id,
           status: "cerrada",
-          closed_at: new Date().toISOString(),
+          closed_at: new Date(),
           expected_amount: esperado,
           declared_amount: declarado,
           difference: +(declarado - esperado).toFixed(2),
-        })
-        .eq("id", sesion.id);
-      if (error) throw error;
+        },
+      });
+      if (!result.success) throw new Error(result.error);
     },
     onSuccess: () => {
       toast.success("Caja cerrada");
@@ -179,9 +200,12 @@ function Caja() {
             <>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-sm font-semibold">{sesion.cash_registers?.name}</h2>
+                  <h2 className="text-sm font-semibold">
+                    {cajas.find((c) => c.id === sesion.cash_register_id)?.name ?? "Caja"}
+                  </h2>
                   <p className="text-xs text-muted-foreground">
-                    Abierta {fechaHora(sesion.opened_at)} por {sesion.user_name ?? "—"}
+                    Abierta {fechaHora(sesion.opened_at?.toISOString())} por{" "}
+                    {sesion.user_name ?? "—"}
                   </p>
                 </div>
                 <Badge>Abierta</Badge>
@@ -215,7 +239,9 @@ function Caja() {
                   <tbody>
                     {movimientos.map((m) => (
                       <tr key={m.id} className="border-t border-border">
-                        <td className="py-2 text-muted-foreground">{fechaHora(m.created_at)}</td>
+                        <td className="py-2 text-muted-foreground">
+                          {fechaHora(m.created_at?.toISOString())}
+                        </td>
                         <td className="capitalize">{m.type}</td>
                         <td>{m.concept}</td>
                         <td className="text-right font-medium">{money(Number(m.amount))}</td>
@@ -337,8 +363,12 @@ function Caja() {
                   className="flex items-center justify-between border-b border-border pb-2 last:border-0"
                 >
                   <div>
-                    <p className="font-medium">{h.cash_registers?.name}</p>
-                    <p className="text-xs text-muted-foreground">{fechaHora(h.closed_at)}</p>
+                    <p className="font-medium">
+                      {cajas.find((c) => c.id === h.cash_register_id)?.name ?? "Caja"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {fechaHora(h.closed_at?.toISOString())}
+                    </p>
                   </div>
                   <span className={Number(h.difference) < 0 ? "text-destructive" : "text-success"}>
                     {money(Number(h.difference))}

@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { getClientesFn, fnClienteInsert } from "@/server-functions/fnGetClientes";
 import { useSession } from "@/hooks/use-session";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
@@ -61,8 +61,21 @@ function Clientes() {
 
   const { data: clientes = [], isLoading } = useQuery({
     queryKey: ["clientes"],
-    queryFn: async () =>
-      (await supabase.from("customers").select("*").order("first_name")).data ?? [],
+    queryFn: async () => {
+      const result = await getClientesFn();
+      if (!result.success) throw new Error(result.error);
+      // Transformar los datos al formato esperado por la pantalla
+      return result.data.map((c) => ({
+        id: c.id,
+        id_number: c.code,
+        first_name: c.name,
+        last_name: "",
+        phone: c.phone || null,
+        email: c.email || null,
+        address: c.address || null,
+        active: true,
+      }));
+    },
   });
 
   const filtrados = useMemo(() => {
@@ -78,16 +91,31 @@ function Clientes() {
 
   const crear = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("customers").insert({
-        id_type: form.id_type,
-        id_number: form.id_number,
-        first_name: form.first_name,
-        last_name: form.last_name || null,
-        phone: form.phone || null,
-        email: form.email || null,
-        address: form.address || null,
+      // Mapeo de tipos de identificación a ID_TIPO_DOC
+      const tipoDocMap: Record<string, string> = {
+        cedula: "TIP_DOC01",
+        ruc: "TIP_DOC02",
+        pasaporte: "TIP_DOC03",
+        consumidor_final: "TIP_DOC05",
+      };
+
+      const idTipoDoc = tipoDocMap[form.id_type];
+      if (!idTipoDoc) {
+        throw new Error(`Tipo de identificación no válido: ${form.id_type}`);
+      }
+
+      const result = await fnClienteInsert({
+        data: {
+          ID_DOCUMENTO: form.id_number,
+          ID_TIPO_DOC: idTipoDoc,
+          NOMBRES: `${form.first_name} ${form.last_name || ""}`.trim(),
+          EMAIL: form.email || null,
+          TELEFONO: form.phone || null,
+          DIRECCION: form.address || null,
+          ESTADO: "A",
+        },
       });
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
     },
     onSuccess: () => {
       toast.success("Cliente registrado");
@@ -111,7 +139,7 @@ function Clientes() {
       title="Clientes"
       subtitle={`${clientes.length} registrados`}
       actions={
-        can("customers.create") && (
+        can("clientes.crear") && (
           <Dialog open={abierto} onOpenChange={setAbierto}>
             <DialogTrigger asChild>
               <Button>Nuevo cliente</Button>

@@ -3,9 +3,13 @@ import { KardexRow } from "@/types/mysqltypes";
 import type { RowDataPacket } from "mysql2";
 
 export async function getKardex(limit: number = 80, sucursalId: string): Promise<KardexRow[]> {
-  console.log(`🔵 [DB] Obteniendo kardex para la sucursal ${sucursalId}, límite ${limit}`);
-  const [rows] = await pool.query<(KardexRow & RowDataPacket)[]>(
-    `
+  try {
+    console.log("🔵 [kardex.getKardex] Obteniendo kardex de vista v_ventas_detalle con: ", {
+      limit,
+      sucursalId,
+    });
+    const [rows] = await pool.query<(KardexRow & RowDataPacket)[]>(
+      `
     SELECT 
       idVenta,
       fechaHora,
@@ -21,8 +25,21 @@ export async function getKardex(limit: number = 80, sucursalId: string): Promise
     ORDER BY fechaHora DESC
     LIMIT ?
     `,
-    [sucursalId, limit],
-  );
-  console.log(`✅ [DB] Ventas retornadas Kardex: ${rows.length}`);
-  return rows;
+      [sucursalId, limit],
+    );
+    console.log("✅ [kardex.getKardex] Kardex obtenido: ", {
+      limit,
+      sucursalId,
+      count: rows.length,
+    });
+    return rows;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("❌ [kardex.getKardex] Error al obtener kardex: ", {
+      limit,
+      sucursalId,
+      message,
+    });
+    throw new Error(`[kardex.getKardex] ${message}`);
+  }
 }

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Bot } from "lucide-react";
 import { toast } from "sonner";
 import { Bot } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -64,7 +64,7 @@ export const Route = createFileRoute("/_authenticated/inventario")({
 
 function Inventario() {
   const qc = useQueryClient();
-  const { nombre, sucursalId, can } = useSession();
+  const { sucursalId, can } = useSession();
   const [q, setQ] = useState("");
   const [abierto, setAbierto] = useState(false);
   const [ajuste, setAjuste] = useState<{
@@ -73,9 +73,8 @@ function Inventario() {
     CANTIDAD: number;
   } | null>(null);
   const [cantidadAjuste, setCantidadAjuste] = useState(0);
-  const [motivo, setMotivo] = useState("");
+  /* const [setMotivo] = useState(""); */
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("");
-  const [pregunta, setPregunta] = useState("");
   const [respuesta, setRespuesta] = useState("");
   const [loading, setLoading] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState<string>("");
@@ -273,7 +272,6 @@ function Inventario() {
       toast.success("Inventario ajustado");
       setAjuste(null);
       setCantidadAjuste(0);
-      setMotivo("");
       qc.invalidateQueries();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -331,11 +329,17 @@ function Inventario() {
                       <SelectValue placeholder="Selecciona categoría" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categorias.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
+                      {isLoadingCategorias ? (
+                        <SelectItem disabled value="loading">
+                          Cargando categorías…
                         </SelectItem>
-                      ))}
+                      ) : (
+                        categorias.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -352,13 +356,19 @@ function Inventario() {
                       <SelectValue placeholder="Selecciona subcategoría" />
                     </SelectTrigger>
                     <SelectContent>
-                      {subcategorias
-                        .filter((sc) => sc.ID_CATEGORIA === categoriaSeleccionada)
-                        .map((sc) => (
-                          <SelectItem key={sc.ID_SUBCATEGORIA} value={sc.ID_SUBCATEGORIA}>
-                            {sc.nombreSubcategoria}
-                          </SelectItem>
-                        ))}
+                      {isLoadingSubcategorias ? (
+                        <SelectItem disabled value="loading">
+                          Cargando subcategorías…
+                        </SelectItem>
+                      ) : (
+                        subcategorias
+                          .filter((sc) => sc.ID_CATEGORIA === categoriaSeleccionada)
+                          .map((sc) => (
+                            <SelectItem key={sc.ID_SUBCATEGORIA} value={sc.ID_SUBCATEGORIA}>
+                              {sc.nombreSubcategoria}
+                            </SelectItem>
+                          ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -405,12 +415,25 @@ function Inventario() {
           placeholder="Selecciona un producto de la tabla..."
           value={productoSeleccionado}
           readOnly
+        <div className="flex items-center space-x-2 mb-4">
+          <Bot className="h-6 w-6 text-white" />
+          <span className="text-lg font-semibold text-white">
+            Consulta de detalles de producto usando IA
+          </span>
+        </div>
+        <Input
+          className="w-1/2 bg-muted text-foreground"
+          placeholder="Selecciona un producto de la tabla..."
+          value={productoSeleccionado}
+          readOnly
         />
         <Button
           onClick={consultaGemini}
           disabled={loading || !productoSeleccionado}
+          disabled={loading || !productoSeleccionado}
           className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
         >
+          {loading ? "Consultando..." : "Consulta IA"}
           {loading ? "Consultando..." : "Consulta IA"}
         </Button>
         {/* Área de respuesta simple */}

@@ -15,11 +15,10 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedCajaRouteImport } from './routes/_authenticated/caja'
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
 import { Route as AuthenticatedConfiguracionRouteImport } from './routes/_authenticated/configuracion'
-import { Route as AuthenticatedFacturacionRouteImport } from './routes/_authenticated/facturacion'
+import { Route as AuthenticatedGaleriaRouteImport } from './routes/_authenticated/galeria'
 import { Route as AuthenticatedInventarioRouteImport } from './routes/_authenticated/inventario'
 import { Route as AuthenticatedPanelRouteImport } from './routes/_authenticated/panel'
 import { Route as AuthenticatedProductosBeneficiosRouteImport } from './routes/_authenticated/productosBeneficios'
-import { Route as AuthenticatedProveedoresRouteImport } from './routes/_authenticated/proveedores'
 import { Route as AuthenticatedReportesRouteImport } from './routes/_authenticated/reportes'
 import { Route as AuthenticatedSeguridadRouteImport } from './routes/_authenticated/seguridad'
 import { Route as AuthenticatedVentasRouteImport } from './routes/_authenticated/ventas'
@@ -54,12 +53,11 @@ const AuthenticatedConfiguracionRoute =
     path: '/configuracion',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedFacturacionRoute =
-  AuthenticatedFacturacionRouteImport.update({
-    id: '/facturacion',
-    path: '/facturacion',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
+const AuthenticatedGaleriaRoute = AuthenticatedGaleriaRouteImport.update({
+  id: '/galeria',
+  path: '/galeria',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedInventarioRoute = AuthenticatedInventarioRouteImport.update({
   id: '/inventario',
   path: '/inventario',
@@ -74,12 +72,6 @@ const AuthenticatedProductosBeneficiosRoute =
   AuthenticatedProductosBeneficiosRouteImport.update({
     id: '/productosBeneficios',
     path: '/productosBeneficios',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedProveedoresRoute =
-  AuthenticatedProveedoresRouteImport.update({
-    id: '/proveedores',
-    path: '/proveedores',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedReportesRoute = AuthenticatedReportesRouteImport.update({
@@ -104,11 +96,10 @@ export interface FileRoutesByFullPath {
   '/caja': typeof AuthenticatedCajaRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
-  '/facturacion': typeof AuthenticatedFacturacionRoute
+  '/galeria': typeof AuthenticatedGaleriaRoute
   '/inventario': typeof AuthenticatedInventarioRoute
   '/panel': typeof AuthenticatedPanelRoute
   '/productosBeneficios': typeof AuthenticatedProductosBeneficiosRoute
-  '/proveedores': typeof AuthenticatedProveedoresRoute
   '/reportes': typeof AuthenticatedReportesRoute
   '/seguridad': typeof AuthenticatedSeguridadRoute
   '/ventas': typeof AuthenticatedVentasRoute
@@ -119,11 +110,10 @@ export interface FileRoutesByTo {
   '/caja': typeof AuthenticatedCajaRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
-  '/facturacion': typeof AuthenticatedFacturacionRoute
+  '/galeria': typeof AuthenticatedGaleriaRoute
   '/inventario': typeof AuthenticatedInventarioRoute
   '/panel': typeof AuthenticatedPanelRoute
   '/productosBeneficios': typeof AuthenticatedProductosBeneficiosRoute
-  '/proveedores': typeof AuthenticatedProveedoresRoute
   '/reportes': typeof AuthenticatedReportesRoute
   '/seguridad': typeof AuthenticatedSeguridadRoute
   '/ventas': typeof AuthenticatedVentasRoute
@@ -136,11 +126,10 @@ export interface FileRoutesById {
   '/_authenticated/caja': typeof AuthenticatedCajaRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
   '/_authenticated/configuracion': typeof AuthenticatedConfiguracionRoute
-  '/_authenticated/facturacion': typeof AuthenticatedFacturacionRoute
+  '/_authenticated/galeria': typeof AuthenticatedGaleriaRoute
   '/_authenticated/inventario': typeof AuthenticatedInventarioRoute
   '/_authenticated/panel': typeof AuthenticatedPanelRoute
   '/_authenticated/productosBeneficios': typeof AuthenticatedProductosBeneficiosRoute
-  '/_authenticated/proveedores': typeof AuthenticatedProveedoresRoute
   '/_authenticated/reportes': typeof AuthenticatedReportesRoute
   '/_authenticated/seguridad': typeof AuthenticatedSeguridadRoute
   '/_authenticated/ventas': typeof AuthenticatedVentasRoute
@@ -153,11 +142,10 @@ export interface FileRouteTypes {
     | '/caja'
     | '/clientes'
     | '/configuracion'
-    | '/facturacion'
+    | '/galeria'
     | '/inventario'
     | '/panel'
     | '/productosBeneficios'
-    | '/proveedores'
     | '/reportes'
     | '/seguridad'
     | '/ventas'
@@ -168,11 +156,10 @@ export interface FileRouteTypes {
     | '/caja'
     | '/clientes'
     | '/configuracion'
-    | '/facturacion'
+    | '/galeria'
     | '/inventario'
     | '/panel'
     | '/productosBeneficios'
-    | '/proveedores'
     | '/reportes'
     | '/seguridad'
     | '/ventas'
@@ -184,11 +171,10 @@ export interface FileRouteTypes {
     | '/_authenticated/caja'
     | '/_authenticated/clientes'
     | '/_authenticated/configuracion'
-    | '/_authenticated/facturacion'
+    | '/_authenticated/galeria'
     | '/_authenticated/inventario'
     | '/_authenticated/panel'
     | '/_authenticated/productosBeneficios'
-    | '/_authenticated/proveedores'
     | '/_authenticated/reportes'
     | '/_authenticated/seguridad'
     | '/_authenticated/ventas'
@@ -244,11 +230,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConfiguracionRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/facturacion': {
-      id: '/_authenticated/facturacion'
-      path: '/facturacion'
-      fullPath: '/facturacion'
-      preLoaderRoute: typeof AuthenticatedFacturacionRouteImport
+    '/_authenticated/galeria': {
+      id: '/_authenticated/galeria'
+      path: '/galeria'
+      fullPath: '/galeria'
+      preLoaderRoute: typeof AuthenticatedGaleriaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/inventario': {
@@ -270,13 +256,6 @@ declare module '@tanstack/react-router' {
       path: '/productosBeneficios'
       fullPath: '/productosBeneficios'
       preLoaderRoute: typeof AuthenticatedProductosBeneficiosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/proveedores': {
-      id: '/_authenticated/proveedores'
-      path: '/proveedores'
-      fullPath: '/proveedores'
-      preLoaderRoute: typeof AuthenticatedProveedoresRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/reportes': {
@@ -307,11 +286,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCajaRoute: typeof AuthenticatedCajaRoute
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRoute
   AuthenticatedConfiguracionRoute: typeof AuthenticatedConfiguracionRoute
-  AuthenticatedFacturacionRoute: typeof AuthenticatedFacturacionRoute
+  AuthenticatedGaleriaRoute: typeof AuthenticatedGaleriaRoute
   AuthenticatedInventarioRoute: typeof AuthenticatedInventarioRoute
   AuthenticatedPanelRoute: typeof AuthenticatedPanelRoute
   AuthenticatedProductosBeneficiosRoute: typeof AuthenticatedProductosBeneficiosRoute
-  AuthenticatedProveedoresRoute: typeof AuthenticatedProveedoresRoute
   AuthenticatedReportesRoute: typeof AuthenticatedReportesRoute
   AuthenticatedSeguridadRoute: typeof AuthenticatedSeguridadRoute
   AuthenticatedVentasRoute: typeof AuthenticatedVentasRoute
@@ -321,11 +299,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCajaRoute: AuthenticatedCajaRoute,
   AuthenticatedClientesRoute: AuthenticatedClientesRoute,
   AuthenticatedConfiguracionRoute: AuthenticatedConfiguracionRoute,
-  AuthenticatedFacturacionRoute: AuthenticatedFacturacionRoute,
+  AuthenticatedGaleriaRoute: AuthenticatedGaleriaRoute,
   AuthenticatedInventarioRoute: AuthenticatedInventarioRoute,
   AuthenticatedPanelRoute: AuthenticatedPanelRoute,
   AuthenticatedProductosBeneficiosRoute: AuthenticatedProductosBeneficiosRoute,
-  AuthenticatedProveedoresRoute: AuthenticatedProveedoresRoute,
   AuthenticatedReportesRoute: AuthenticatedReportesRoute,
   AuthenticatedSeguridadRoute: AuthenticatedSeguridadRoute,
   AuthenticatedVentasRoute: AuthenticatedVentasRoute,
