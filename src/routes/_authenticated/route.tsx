@@ -9,8 +9,11 @@ export const Route = createFileRoute("/_authenticated")({
 
     const session = await getSession(); // lee token + user desde localStorage
     if (!session || !session.user) {
-      console.warn("⚠️ [AuthRoute] No hay sesión, redirigiendo a /auth");
-      throw redirect({ to: "/auth" });
+      console.warn("⚠️ [AuthRoute] No hay sesión, redirigiendo a ultima pagina");
+      throw redirect({
+        to: "/auth",
+        search: { returnTo: location.pathname },
+      });
     }
 
     type JwtPayload = {

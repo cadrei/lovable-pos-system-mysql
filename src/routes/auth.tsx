@@ -32,30 +32,30 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [nombre, setNombre] = useState("");
   const [busy, setBusy] = useState(false);
+  const params = new URLSearchParams(location.search);
+  const returnTo = params.get("returnTo") ?? "/panel";
 
   useEffect(() => {
-    if (!loading && session) navigate({ to: "/panel", replace: true });
-  }, [loading, session, navigate]);
+    if (!loading && session) {
+      navigate({ to: returnTo, replace: true });
+    }
+  }, [loading, session, navigate, returnTo]);
 
   async function entrar(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     console.log("🔵 [AuthPage] Iniciando proceso de login...");
-
     try {
       console.log("🔵 [AuthPage] Llamando a loginFn con email:", email);
       const result = await loginFn({
         data: { email, password },
       } as never);
-
       setBusy(false);
-
       if (!result.success) {
         console.error("❌ [AuthPage] Error en login:", result.error);
         toast.error(result.error ?? "Error al iniciar sesión");
         return;
       }
-
       localStorage.setItem("auth_token", result.data?.token);
       localStorage.setItem("auth_user", JSON.stringify(result.data?.user));
       console.log("✅ [AuthPage] Sesión guardada en localStorage");
@@ -64,7 +64,7 @@ function AuthPage() {
       console.log("✅ Redirigiendo a pagina principal: /panel");
       toast.success("Bienvenido de nuevo");
       refresh();
-      navigate({ to: "/panel", replace: true }); // ✅ Redirigir al panel
+      navigate({ to: returnTo, replace: true });
     } catch (err) {
       setBusy(false);
       console.error("❌ [AuthPage] Excepción en login:", err);
