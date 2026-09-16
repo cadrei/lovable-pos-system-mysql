@@ -1,0 +1,554 @@
+================================================================================
+  TODO / ANALISIS DE PAGINAS - /src/routes/_authenticated
+  Generado como documento de trabajo (read-only sobre el codigo existente)
+================================================================================
+
+NOTA GENERAL:
+Este archivo NO modifica nada. Es un listado pagina por pagina con 7 secciones:
+  1. Estructura y proposito
+  2. Estado actual
+  3. Optimizaciones posibles
+  4. Diseno responsivo
+  5. Funcionalidad adicional
+  6. UI/UX y embellecimiento
+  7. Recomendaciones finales
+En cada seccion hay una nota "COMO TE PUEDO AYUDAR" con acciones concretas
+que puedo ejecutar si me lo pides.
+
+================================================================================
+  1) route.tsx  (LAYOUT DE AUTENTICACION)
+================================================================================
+
+--- 1. Estructura y proposito ---
+Archivo de layout para el grupo _authenticated. No renderiza UI propia mas alla
+de <Outlet />. Su rol es el guard de sesion: en beforeLoad llama a getSession(),
+si no hay sesion redirige a /auth, y decodifica el JWT para exponer PERMISOS.
+Usa ssr: false.
+  >> COMO TE PUEDO AYUDAR: puedo generar documentacion tecnica del flujo de auth
+     (diagrama Mermaid), extraer el decode del JWT a un helper reutilizable en
+     src/lib, y tipar correctamente el objeto PERMISOS.
+
+--- 2. Estado actual ---
+Funciona como guard basico. Tiene console.log de depuracion en el beforeLoad.
+El resultado decodificado del JWT se usa sobre todo para logging; el consumo
+de PERMISOS queda implicito.
+  >> COMO TE PUEDO AYUDAR: puedo revisar si el guard cubre todos los casos
+     (token expirado, token corrupto, permisos vacios) y proponer pruebas.
+
+--- 3. Optimizaciones posibles ---
+- Eliminar console.log de produccion.
+- Extraer decodeJwt + normalizacion de permisos a un modulo testeable.
+- Memoizar/centralizar la lista de permisos para evitar recalculos en cada nav.
+- Validar expiracion del token antes de confiar en el payload.
+  >> COMO TE PUEDO AYUDAR: puedo hacer el refactor a src/lib/auth-guard.ts con
+     tipos y tests, sin tocar la logica de rutas.
+
+--- 4. Diseno responsivo ---
+No aplica (no renderiza UI). El layout responsivo vive en AppShell.
+  >> COMO TE PUEDO AYUDAR: puedo verificar que AppShell maneje bien el sidebar
+     colapsable en movil y tablet.
+
+--- 5. Funcionalidad adicional ---
+- Refresh silencioso de sesion antes de expirar.
+- Redireccion con "returnTo" para volver a la pagina intentada.
+- Manejo de sesion multi-sucursal.
+  >> COMO TE PUEDO AYUDAR: puedo implementar returnTo y el refresh de token.
+
+--- 6. UI/UX y embellecimiento ---
+No aplica. Podria mostrarse un loader mientras se valida la sesion.
+  >> COMO TE PUEDO AYUDAR: puedo agregar un fallback de carga (skeleton/spinner)
+     en el pendingComponent de la ruta.
+
+--- 7. Recomendaciones finales ---
+Quitar logs, tipar permisos, agregar tests del guard y pendingComponent.
+  >> COMO TE PUEDO AYUDAR: puedo dejar una checklist y ejecutarla por partes.
+
+
+================================================================================
+  2) panel.tsx  (DASHBOARD PRINCIPAL)
+================================================================================
+
+--- 1. Estructura y proposito ---
+Dashboard general. Muestra KPIs (ventas hoy, 30 dias, utilidad, ticket promedio),
+un AreaChart de 14 dias, alertas de stock bajo con paginacion manual
+(pageSize = 8, botones prev/next) y tabla de ventas recientes.
+  >> COMO TE PUEDO AYUDAR: puedo documentar el origen de cada KPI y su query.
+
+--- 2. Estado actual ---
+Funcional. Hay codigo de sucursales comentado. Redirige con navigate si no hay
+sesion. Las metricas se calculan en cada render (sin useMemo). "totalMes" suma
+TODAS las ventas traidas, no estrictamente los ultimos 30 dias (posible bug).
+  >> COMO TE PUEDO AYUDAR: puedo verificar el calculo real de "totalMes" contra
+     la query y corregir el rango de fechas.
+
+--- 3. Optimizaciones posibles ---
+- useMemo para KPIs y series del grafico.
+- Reemplazar botones manuales por el componente <Pagination> de shadcn.
+- Eliminar el bloque comentado de sucursales.
+- Paginacion/limit en la query de ventas recientes.
+  >> COMO TE PUEDO AYUDAR: puedo migrar la paginacion a shadcn y memoizar los
+     calculos con un diff acotado.
+
+--- 4. Diseno responsivo ---
+Grid de KPIs y grafico: revisar que colapsen a 1 columna en movil.
+  >> COMO TE PUEDO AYUDAR: puedo ajustar los grid-cols con breakpoints sm/md/lg.
+
+--- 5. Funcionalidad adicional ---
+- Filtro por sucursal y rango de fechas.
+- Comparativa periodo anterior.
+- Exportar el dashboard a PDF/CSV.
+  >> COMO TE PUEDO AYUDAR: puedo implementar el filtro por sucursal y el export.
+
+--- 6. UI/UX y embellecimiento ---
+- Skeletons durante la carga.
+- Colores semanticos en variaciones (verde/rojo).
+- Tooltips en el grafico.
+  >> COMO TE PUEDO AYUDAR: puedo agregar skeletons y tooltips con recharts.
+
+--- 7. Recomendaciones finales ---
+Corregir "totalMes", memoizar, unificar paginacion y limpiar comentarios.
+  >> COMO TE PUEDO AYUDAR: puedo priorizar estos 4 puntos y aplicarlos.
+
+
+================================================================================
+  3) ventas.tsx  (PUNTO DE VENTA / POS)
+================================================================================
+
+--- 1. Estructura y proposito ---
+POS principal. Hotkey F2, busqueda de productos (slice 12), carrito, busqueda
+inline de cliente, seleccion de metodo de pago, descuento, IVA 15%, cobro via
+cobrarVentaFn y numeracion con getNextDocumentNumberFn. Usa sesion de caja.
+  >> COMO TE PUEDO AYUDAR: puedo mapear el flujo completo de una venta.
+
+--- 2. Estado actual ---
+Funcional. idEmpleado: 7 esta hardcodeado (deberia venir de la sesion).
+La grilla de productos no esta paginada (slice 12). IVA 15% fijo. No hay
+navegacion por teclado del carrito ni impresion de recibo/anulacion.
+  >> COMO TE PUEDO AYUDAR: puedo reemplazar idEmpleado por el valor de sesion y
+     centralizar la constante de IVA.
+
+--- 3. Optimizaciones posibles ---
+- Derivar idEmpleado de useSession.
+- Extraer calculo de totales (subtotal, IVA, descuento) a un helper puro.
+- Debounce en la busqueda de productos.
+- useMemo/useCallback en handlers calientes del POS.
+  >> COMO TE PUEDO AYUDAR: puedo extraer el calculo de totales a src/lib/pos.ts
+     con tests.
+
+--- 4. Diseno responsivo ---
+Layout de dos paneles (productos | carrito): en movil deberia apilarse o usar
+tabs. Verificar targets tactiles.
+  >> COMO TE PUEDO AYUDAR: puedo proponer layout responsivo con tabs en movil.
+
+--- 5. Funcionalidad adicional ---
+- Impresion de ticket/recibo.
+- Anulacion/devolucion de venta.
+- Atajos de teclado completos (cantidad, quitar item, cobrar).
+- Seleccion de cliente con modal en vez de inline.
+  >> COMO TE PUEDO AYUDAR: puedo implementar anulacion y atajos de teclado.
+
+--- 6. UI/UX y embellecimiento ---
+- Feedback visual al agregar al carrito.
+- Botones de producto accesibles (aria-label, focus visible).
+- Total destacado y sticky en el carrito.
+  >> COMO TE PUEDO AYUDAR: puedo mejorar accesibilidad y el total sticky.
+
+--- 7. Recomendaciones finales ---
+Quitar idEmpleado hardcodeado, centralizar IVA, agregar impresion y anulacion.
+  >> COMO TE PUEDO AYUDAR: puedo atacar primero los hardcodes y luego features.
+
+
+================================================================================
+  4) caja.tsx  (CONTROL DE CAJA)
+================================================================================
+
+--- 1. Estructura y proposito ---
+Gestion de caja: apertura, movimientos, arqueo y cierre. Usa fnCashRegistersGet,
+getSesionCajaFn, fnSesionCajaInsert, fnUpdateSesionCaja, getMovimientosCajaFn y
+fnInsertMovimientoCaja. Lista las ultimas 15 sesiones cerradas.
+  >> COMO TE PUEDO AYUDAR: puedo documentar los estados de una sesion de caja.
+
+--- 2. Estado actual ---
+Funcional. Sin dialogos de confirmacion al cerrar caja. Historial sin filtro por
+fecha. Tabla de movimientos no paginada.
+  >> COMO TE PUEDO AYUDAR: puedo agregar confirmacion (AlertDialog) al cierre.
+
+--- 3. Optimizaciones posibles ---
+- Confirmacion antes de cerrar (evita cierres accidentales).
+- Filtro por rango de fechas en historial.
+- Paginacion de movimientos.
+- useMemo en totales de arqueo.
+  >> COMO TE PUEDO AYUDAR: puedo implementar el filtro de fechas y paginacion.
+
+--- 4. Diseno responsivo ---
+Tablas de movimientos/historial: overflow-x-auto en movil o vista de tarjetas.
+  >> COMO TE PUEDO AYUDAR: puedo convertir tablas a tarjetas en pantallas chicas.
+
+--- 5. Funcionalidad adicional ---
+- Arqueo con denominaciones (billetes/monedas).
+- Diferencia esperado vs contado resaltada.
+- Exportar cierre a PDF.
+  >> COMO TE PUEDO AYUDAR: puedo implementar el arqueo por denominaciones.
+
+--- 6. UI/UX y embellecimiento ---
+- Badge de estado (abierta/cerrada).
+- Colores para ingresos/egresos.
+- Resumen sticky del saldo.
+  >> COMO TE PUEDO AYUDAR: puedo agregar badges y colores semanticos.
+
+--- 7. Recomendaciones finales ---
+Confirmaciones, filtros y paginacion; luego arqueo detallado.
+  >> COMO TE PUEDO AYUDAR: puedo priorizar por riesgo operativo.
+
+
+================================================================================
+  5) clientes.tsx  (DIRECTORIO DE CLIENTES)
+================================================================================
+
+--- 1. Estructura y proposito ---
+Directorio de clientes. Usa getClientesFn y fnClienteInsert, formulario en Dialog
+y filtro con useMemo. Mapea tipo de documento (cedula -> TIP_DOC01, etc.).
+  >> COMO TE PUEDO AYUDAR: puedo documentar el modelo de datos de clientes.
+
+--- 2. Estado actual ---
+Funcional. Sin paginacion (listas grandes). Sin editar/eliminar. Mapa de tipo de
+documento hardcodeado. Validacion de email ausente.
+  >> COMO TE PUEDO AYUDAR: puedo agregar validacion con zod + react-hook-form.
+
+--- 3. Optimizaciones posibles ---
+- Paginacion o virtualizacion de la lista.
+- Validacion de email/telefono/duplicados.
+- Edicion y borrado con confirmacion.
+- Centralizar el mapa tipoDoc en constantes.
+  >> COMO TE PUEDO AYUDAR: puedo implementar edicion/borrado y validaciones.
+
+--- 4. Diseno responsivo ---
+Tabla -> tarjetas en movil; formulario de Dialog a full-screen en pantallas chicas.
+  >> COMO TE PUEDO AYUDAR: puedo ajustar el Dialog responsivo.
+
+--- 5. Funcionalidad adicional ---
+- Historial de compras por cliente.
+- Import/export CSV.
+- Busqueda por documento/telefono.
+  >> COMO TE PUEDO AYUDAR: puedo implementar import/export y busqueda avanzada.
+
+--- 6. UI/UX y embellecimiento ---
+- Avatar con iniciales.
+- Chips de estado (activo/inactivo).
+- Empty state con CTA "Nuevo cliente".
+  >> COMO TE PUEDO AYUDAR: puedo agregar avatars y empty states.
+
+--- 7. Recomendaciones finales ---
+Validar datos, agregar CRUD completo y paginar.
+  >> COMO TE PUEDO AYUDAR: puedo empezar por validaciones y CRUD.
+
+
+================================================================================
+  6) inventario.tsx  (CATALOGO Y KARDEX)  [YA MEJORADO]
+================================================================================
+
+--- 1. Estructura y proposito ---
+Gestion de inventario con tabs: Catalogo y Kardex. Usa getProductosFn,
+getCategoriasFn, getSubcategoriasFn, getKardexFn, insertProductoFn y
+ajustarInventarioFn.
+  >> COMO TE PUEDO AYUDAR: puedo documentar el esquema de productos/kardex.
+
+--- 2. Estado actual ---
+El tab Catalogo YA tiene paginacion (20 por pagina, numerica con rangos
+abreviados, prev/next y contador "Mostrando X-Y de Z"). La busqueda resetea a
+pagina 1. Paginacion es client-side (1485 productos en memoria).
+  >> COMO TE PUEDO AYUDAR: puedo migrar a paginacion server-side.
+
+--- 3. Optimizaciones posibles ---
+- Paginacion server-side (limit/offset) para 1485 productos.
+- Editar/eliminar producto.
+- Filtros de kardex por fecha/tipo y paginacion.
+- Debounce en la busqueda.
+  >> COMO TE PUEDO AYUDAR: puedo implementar limit/offset en getProductosFn.
+
+--- 4. Diseno responsivo ---
+Tabla ancha: overflow-x-auto; considerar columnas prioritarias en movil.
+  >> COMO TE PUEDO AYUDAR: puedo definir columnas que se ocultan en movil.
+
+--- 5. Funcionalidad adicional ---
+- Ajuste de inventario con motivo.
+- Alertas de stock minimo.
+- Codigos de barras / etiquetas.
+  >> COMO TE PUEDO AYUDAR: puedo implementar ajustes con motivo y alertas.
+
+--- 6. UI/UX y embellecimiento ---
+- Badges de stock (bajo/ok).
+- Estado de carga con skeletons.
+- Resaltar filas con stock critico.
+  >> COMO TE PUEDO AYUDAR: puedo agregar badges y resaltado condicional.
+
+--- 7. Recomendaciones finales ---
+Migrar paginacion a servidor y completar CRUD de producto.
+  >> COMO TE PUEDO AYUDAR: puedo hacerlo paso a paso con verificacion.
+
+
+================================================================================
+  7) configuracion.tsx  (CONFIGURACION GENERAL)
+================================================================================
+
+--- 1. Estructura y proposito ---
+Configuracion con 4 tabs. Datos de empresa en memoria (no persistidos); funciones
+fnCfg* para sucursales, cajas, categorias, marcas e impuestos; fnCfgAjustePersist;
+unidades y settings en memoria. Permiso can("configuracion.editar").
+  >> COMO TE PUEDO AYUDAR: puedo documentar que se persiste y que no.
+
+--- 2. Estado actual ---
+Funcional parcialmente. Datos de empresa, unidades y settings NO se guardan
+(se pierden al recargar). Sin validacion. Sucursales/cajas sin paginacion.
+  >> COMO TE PUEDO AYUDAR: puedo implementar la persistencia de lo que falta.
+
+--- 3. Optimizaciones posibles ---
+- Persistir empresa/unidades/settings (fnCfg* correspondiente).
+- Validacion de formularios (zod).
+- Paginacion en listados de sucursales/cajas.
+- Feedback de guardado (toast + estado dirty).
+  >> COMO TE PUEDO AYUDAR: puedo crear las server functions de persistencia.
+
+--- 4. Diseno responsivo ---
+Tabs con muchos campos: usar grid responsivo y agrupar por secciones.
+  >> COMO TE PUEDO AYUDAR: puedo reorganizar en secciones con grid sm/md/lg.
+
+--- 5. Funcionalidad adicional ---
+- Import/export de configuracion.
+- Historial de cambios (auditoria).
+- Duplicar configuracion entre sucursales.
+  >> COMO TE PUEDO AYUDAR: puedo implementar export/import de config.
+
+--- 6. UI/UX y embellecimiento ---
+- Indicador de cambios sin guardar.
+- Botones deshabilitados si no hay permisos.
+- Confirmacion al salir con cambios.
+  >> COMO TE PUEDO AYUDAR: puedo agregar el estado dirty y bloqueo de salida.
+
+--- 7. Recomendaciones finales ---
+Completar persistencia y validacion; luego auditoria.
+  >> COMO TE PUEDO AYUDAR: puedo empezar por la persistencia pendiente.
+
+
+================================================================================
+  8) galeria.tsx  (GALERIA ECOMMERCE)
+================================================================================
+
+--- 1. Estructura y proposito ---
+Galeria estilo ecommerce. Usa getProductosVistaFn y getImagenesPorProductoFn
+(useQueries). Paginacion prev/next (pageSize = 9), lightbox modal y subcomponente
+ProductoCard con thumbnails y lazy loading.
+  >> COMO TE PUEDO AYUDAR: puedo documentar el flujo de imagenes.
+
+--- 2. Estado actual ---
+Funcional. Solo prev/next (sin paginas numericas). El lightbox no tiene cierre
+con ESC, focus trap ni aria. Las tarjetas no son botones accesibles.
+  >> COMO TE PUEDO AYUDAR: puedo agregar ESC, focus trap y aria al lightbox.
+
+--- 3. Optimizaciones posibles ---
+- Paginacion numerica (reusar patron de inventario).
+- Precarga/placeholder de imagenes.
+- IntersectionObserver para carga diferida.
+- Memoizar ProductoCard.
+  >> COMO TE PUEDO AYUDAR: puedo migrar a paginacion numerica y memoizar.
+
+--- 4. Diseno responsivo ---
+Grid de tarjetas: 1/2/3/4 columnas segun breakpoint.
+  >> COMO TE PUEDO AYUDAR: puedo ajustar el grid con breakpoints.
+
+--- 5. Funcionalidad adicional ---
+- Filtro por categoria/marca/precio.
+- Zoom en la imagen.
+- Agregar al carrito desde la galeria.
+  >> COMO TE PUEDO AYUDAR: puedo implementar filtros y zoom.
+
+--- 6. UI/UX y embellecimiento ---
+- Hover con elevacion en tarjetas.
+- Skeleton de imagen.
+- Transiciones suaves en el lightbox.
+  >> COMO TE PUEDO AYUDAR: puedo agregar hover, skeleton y transiciones.
+
+--- 7. Recomendaciones finales ---
+Accesibilidad del lightbox y paginacion numerica.
+  >> COMO TE PUEDO AYUDAR: puedo priorizar accesibilidad primero.
+
+
+================================================================================
+  9) reportes.tsx  (ANALITICA Y REPORTES)
+================================================================================
+
+--- 1. Estructura y proposito ---
+Reportes con 4 tabs: Ventas, Categorias, Inventario y Caja. Incluye rangos de
+fecha, helper descargarCsv, KPIs, AreaChart y paginacion de productos
+(pageSize = 20 con getVisiblePages: max 5 visibles + elipsis).
+Permiso can("reportes.exportar").
+  >> COMO TE PUEDO AYUDAR: puedo documentar cada reporte y sus fuentes.
+
+--- 2. Estado actual ---
+Funcional y el mas avanzado en paginacion (logica de elipsis propia). Usa botones
+custom en vez de <Pagination> de shadcn. La tabla de ventas se limita a 100 sin
+paginacion. Fechas manejadas como strings UTC.
+  >> COMO TE PUEDO AYUDAR: puedo unificar getVisiblePages con shadcn Pagination.
+
+--- 3. Optimizaciones posibles ---
+- Unificar la paginacion con el componente shadcn (reutilizable).
+- Paginar la tabla de ventas (no limitar a 100).
+- Centralizar descargarCsv en un helper compartido.
+- Manejo de fechas con timezone local.
+  >> COMO TE PUEDO AYUDAR: puedo extraer un hook usePagination reutilizable.
+
+--- 4. Diseno responsivo ---
+Graficos y tablas: verificar altura fija del chart y overflow en tablas.
+  >> COMO TE PUEDO AYUDAR: puedo ajustar alturas responsivas en recharts.
+
+--- 5. Funcionalidad adicional ---
+- Rangos predefinidos (hoy, semana, mes, custom).
+- Exportar a Excel/PDF.
+- Comparativa entre sucursales.
+  >> COMO TE PUEDO AYUDAR: puedo implementar rangos predefinidos y export Excel.
+
+--- 6. UI/UX y embellecimiento ---
+- Estado de carga en exportaciones.
+- Tooltips y leyendas en graficos.
+- Cards de KPI consistentes con panel.
+  >> COMO TE PUEDO AYUDAR: puedo unificar el estilo de KPIs con panel.tsx.
+
+--- 7. Recomendaciones finales ---
+Unificar paginacion y export, y quitar el limite de 100 en ventas.
+  >> COMO TE PUEDO AYUDAR: puedo crear el hook de paginacion compartido.
+
+
+================================================================================
+  10) seguridad.tsx  (USUARIOS, ROLES, PERMISOS, AUDITORIA)
+================================================================================
+
+--- 1. Estructura y proposito ---
+Seguridad con 4 tabs: Usuarios, Roles, Permisos y Auditoria. Usa 7 queries
+(fnUsuariosGet, fnRolesSeguridadGet, fnRolesGet, sucursalesFn, fnPermisosGet,
+fnRolesPermisosGet, fnAuditoriaUsuariosGet). Matriz de permisos agrupada por
+modulo y filtro de auditoria. Permiso can("users.update").
+ROLES: admin_matriz, admin_sucursal, empleado, visualizador.
+  >> COMO TE PUEDO AYUDAR: puedo documentar la matriz rol-permiso.
+
+--- 2. Estado actual ---
+Funcional. Render pesado (N+1 visual en la matriz). Sin paginacion en usuarios ni
+auditoria. En auditoria el entity_id se muestra con slice(0,8) (puede confundir).
+  >> COMO TE PUEDO AYUDAR: puedo revisar el rendimiento de la matriz de permisos.
+
+--- 3. Optimizaciones posibles ---
+- Virtualizar o memoizar la matriz de permisos.
+- Paginacion en usuarios y auditoria.
+- Mostrar entity_id completo o con tooltip.
+- Agrupar queries relacionadas / prefetch.
+  >> COMO TE PUEDO AYUDAR: puedo memoizar la matriz y paginar las tablas.
+
+--- 4. Diseno responsivo ---
+Matriz de permisos ancha: scroll horizontal controlado; tabs en movil.
+  >> COMO TE PUEDO AYUDAR: puedo hacer la matriz scrollable con header sticky.
+
+--- 5. Funcionalidad adicional ---n- Crear/editar usuario y asignar roles.
+- Auditoria con filtros por usuario/fecha/accion.
+- Export de la matriz de permisos.
+  >> COMO TE PUEDO AYUDAR: puedo implementar filtros de auditoria y export.
+
+--- 6. UI/UX y embellecimiento ---
+- Badges por rol.
+- Indicadores de permiso (check/x) claros.
+- Empty states en auditoria.
+  >> COMO TE PUEDO AYUDAR: puedo agregar badges y empty states.
+
+--- 7. Recomendaciones finales ---
+Rendimiento de la matriz + paginacion + filtros de auditoria.
+  >> COMO TE PUEDO AYUDAR: puedo empezar por rendimiento y luego features.
+
+
+================================================================================
+  11) productosBeneficios.tsx  (BUSQUEDA POR SINTOMA/BENEFICIO)
+================================================================================
+
+--- 1. Estructura y proposito ---
+Busqueda de productos por sintoma/beneficio. Combobox Command para beneficios,
+select nativo para sucursales (incluye "ALL"/TODAS), filtro de texto por nombre e
+tabla renderizada con una IIFE inline. Usa getBeneficiosFn, getProdBenefFn y
+sucursalesFn. Errores via toast en useEffect.
+  >> COMO TE PUEDO AYUDAR: puedo documentar el flujo de busqueda.
+
+--- 2. Estado actual ---
+Funcional. La busqueda es por nombre (searchProducto) y no hay paginacion. Usa
+<select> nativo en vez de shadcn Select. Hay un IIFE dentro del JSX (dificil de
+mantener). El combobox carece de pulido de loading/empty.
+  >> COMO TE PUEDO AYUDAR: puedo extraer el IIFE a un componente/render helper.
+
+--- 3. Optimizaciones posibles ---
+- Extraer el IIFE a un componente ProductosTable.
+- Cambiar <select> nativo por shadcn Select.
+- Paginacion de resultados.
+- useMemo para productosFiltrados.
+  >> COMO TE PUEDO AYUDAR: puedo refactorizar el IIFE y migrar el select.
+
+--- 4. Diseno responsivo ---
+Tabla de 7 columnas: overflow-x-auto o tarjetas en movil.
+  >> COMO TE PUEDO AYUDAR: puedo adaptar la tabla a tarjetas en movil.
+
+--- 5. Funcionalidad adicional ---
+- Busqueda combinada (beneficio + sucursal + texto).
+- Ordenar por precio/cantidad.
+- Guardar busquedas frecuentes.
+  >> COMO TE PUEDO AYUDAR: puedo implementar ordenamiento y busqueda combinada.
+
+--- 6. UI/UX y embellecimiento ---
+- Mostrar el beneficio seleccionado como chip.
+- Skeleton de tabla.
+- Empty state claro.
+  >> COMO TE PUEDO AYUDAR: puedo agregar chips, skeleton y empty state.
+
+--- 7. Recomendaciones finales ---
+Refactor del IIFE, shadcn Select y paginacion.
+  >> COMO TE PUEDO AYUDAR: puedo hacerlo en un solo PR acotado.
+
+
+================================================================================
+  OBSERVACIONES TRANSVERSALES (aplican a varias paginas)
+================================================================================
+
+1. PAGINACION INCONSISTENTE
+   Solo inventario.tsx usa <Pagination> de shadcn. panel.tsx, galeria.tsx y
+   productosBeneficios.tsx usan botones nativos/prev-next; reportes.tsx usa
+   botones custom con getVisiblePages; clientes.tsx, caja.tsx y seguridad.tsx no
+   paginan.
+   >> COMO TE PUEDO AYUDAR: puedo crear un hook usePagination + <DataPagination>
+      reutilizable y migrar todas las paginas a un patron unico.
+
+2. TABLAS DUPLICADAS
+   Cada pagina reimplementa su <table> con estilos distintos.
+   >> COMO TE PUEDO AYUDAR: puedo crear un <DataTable> con columnas configurables.
+
+3. FORMULARIOS SIN VALIDACION
+   react-hook-form y zod ya estan instalados pero no se usan de forma consistente.
+   >> COMO TE PUEDO AYUDAR: puedo estandarizar formularios con RHF + zod.
+
+4. ESTADOS DE CARGA Y ERROR
+   Faltan skeletons y manejo visible de errores (solo toasts en algunos casos).
+   >> COMO TE PUEDO AYUDAR: puedo agregar <Skeleton> y estados de error unificados.
+
+5. CONSTANTES HARDCODEADAS
+   IVA 15%, idEmpleado: 7, mapa tipoDoc, ROLES.
+   >> COMO TE PUEDO AYUDAR: puedo centralizarlas en src/lib/constants.ts.
+
+6. CONSOLE.LOG EN PRODUCCION
+   route.tsx y otras paginas dejan logs.
+   >> COMO TE PUEDO AYUDAR: puedo limpiarlos y/o usar un logger condicional.
+
+7. ACCESIBILIDAD
+   Lightbox sin focus trap, botones sin aria-label, tablas sin caption.
+   >> COMO TE PUEDO AYUDAR: puedo hacer una pasada de accesibilidad (aria, focus,
+      teclado) pagina por pagina.
+
+8. PAGINACION SERVER-SIDE
+   Datasets grandes (productos=1485, kardex) se cargan completos en memoria.
+   >> COMO TE PUEDO AYUDAR: puedo implementar limit/offset en las server functions.
+
+
+================================================================================
+  FIN DEL DOCUMENTO
+================================================================================

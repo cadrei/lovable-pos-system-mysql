@@ -25,6 +25,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/hooks/use-session";
 import { fechaHora, money } from "@/lib/format";
@@ -68,6 +77,8 @@ function Inventario() {
   const [pregunta, setPregunta] = useState("");
   const [respuesta, setRespuesta] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const PRODUCTOS_POR_PAGINA = 20;
 
   const consultaGemini = async () => {
     setLoading(true);
@@ -166,6 +177,29 @@ function Inventario() {
         p.code.toLowerCase().includes(s) ||
         (p.barcode ?? "").includes(s),
     );
+  })();
+
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PRODUCTOS_POR_PAGINA));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
+  const paginados = filtrados.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
+
+  const rangosPaginacion = (() => {
+    const paginas: (number | "ellipsis")[] = [];
+    const total = totalPaginas;
+    const actual = paginaActual;
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) paginas.push(i);
+      return paginas;
+    }
+    paginas.push(1);
+    const izq = Math.max(2, actual - 1);
+    const der = Math.min(total - 1, actual + 1);
+    if (izq > 2) paginas.push("ellipsis");
+    for (let i = izq; i <= der; i++) paginas.push(i);
+    if (der < total - 1) paginas.push("ellipsis");
+    paginas.push(total);
+    return paginas;
   })();
 
   const crearProducto = useMutation({
@@ -374,7 +408,10 @@ function Inventario() {
               className="pl-9"
               placeholder="Buscar producto"
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setPagina(1);
+              }}
             />
           </div>
 
@@ -398,7 +435,7 @@ function Inventario() {
                     </td>
                   </tr>
                 )}
-                {filtrados.map((p) => (
+                {paginados.map((p) => (
                   <tr key={p.id} className="border-t border-border">
                     <td className="p-3 font-mono text-xs">{p.code}</td>
                     <td className="font-medium">
@@ -437,6 +474,65 @@ function Inventario() {
               </tbody>
             </table>
           </div>
+
+          {!isLoadingProductos && filtrados.length > 0 && (
+            <div className="flex flex-col items-center justify-between gap-3 pt-2 sm:flex-row">
+              <p className="text-xs text-muted-foreground">
+                {`Mostrando ${inicio + 1}–${Math.min(
+                  inicio + PRODUCTOS_POR_PAGINA,
+                  filtrados.length,
+                )} de ${filtrados.length} productos`}
+              </p>
+              {totalPaginas > 1 && (
+                <Pagination className="mx-0 w-auto">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPagina((p) => Math.max(1, p - 1));
+                        }}
+                        className={paginaActual === 1 ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                    {rangosPaginacion.map((r, i) =>
+                      r === "ellipsis" ? (
+                        <PaginationItem key={`e-${i}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={r}>
+                          <PaginationLink
+                            href="#"
+                            isActive={r === paginaActual}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setPagina(r);
+                            }}
+                          >
+                            {r}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ),
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPagina((p) => Math.min(totalPaginas, p + 1));
+                        }}
+                        className={
+                          paginaActual === totalPaginas ? "pointer-events-none opacity-50" : ""
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="kardex" className="mt-4">
