@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
-
+import { Bot } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,15 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/hooks/use-session";
 import { fechaHora, money } from "@/lib/format";
@@ -43,8 +34,17 @@ import { getKardexFn } from "@/server-functions/fnGetKardex";
 import { insertProductoFn } from "@/server-functions/fnInsertProducto";
 import { ajustarInventarioFn } from "@/server-functions/fnAjustarInventario";
 import { getSubcategoriasFn } from "@/server-functions/fnGetSubcategorias";
-import { consultarGemini } from "@/server-functions/fngemini";
+import { consultarGemini, consultarGeminiTest } from "@/server-functions/fngemini";
 import { ProductoInsertRow, CategoriaRow, SubcategoriaRow } from "@/types/mysqltypes";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export const Route = createFileRoute("/_authenticated/inventario")({
   head: () => ({
@@ -77,6 +77,7 @@ function Inventario() {
   const [pregunta, setPregunta] = useState("");
   const [respuesta, setRespuesta] = useState("");
   const [loading, setLoading] = useState(false);
+  const [productoSeleccionado, setProductoSeleccionado] = useState<string>("");
   const [pagina, setPagina] = useState(1);
   const PRODUCTOS_POR_PAGINA = 20;
 
@@ -84,7 +85,22 @@ function Inventario() {
     setLoading(true);
     setRespuesta("");
     try {
-      const data = await consultarGemini({ data: { prompt: pregunta } });
+      const promptIA = `Quiero un análisis detallado del producto ${productoSeleccionado}. 
+          Incluye:
+          - Descripción completa
+          - Beneficios principales
+          - Aplicaciones prácticas
+          - Forma de uso recomendada
+          - Rango de edad o perfil de usuario adecuado
+          - Precauciones o contraindicaciones
+          - Comparación con productos similares si aplica`;
+      const promptCorto = `Resume el producto ${productoSeleccionado}. 
+          Incluye solo lo esencial:
+            - Descripción
+            - Beneficios principales
+            - Forma de uso
+            - Precauciones`;
+      const data = await consultarGemini({ data: { prompt: promptCorto } });
       setRespuesta(data.output ?? "No hubo respuesta");
     } catch (err) {
       console.error("Error en consulta:", err);
@@ -374,19 +390,24 @@ function Inventario() {
       }
     >
       <div className="space-y-4 mb-8">
-        <textarea
-          className="w-full p-2 border rounded"
-          rows={3}
-          placeholder="Escribe tu pregunta sobre el producto..."
-          value={pregunta}
-          onChange={(e) => setPregunta(e.target.value)}
+        <div className="flex items-center space-x-2 mb-4">
+          <Bot className="h-6 w-6 text-white" />
+          <span className="text-lg font-semibold text-white">
+            Consulta de detalles de producto usando IA
+          </span>
+        </div>
+        <Input
+          className="w-1/2 bg-muted text-foreground"
+          placeholder="Selecciona un producto de la tabla..."
+          value={productoSeleccionado}
+          readOnly
         />
         <Button
           onClick={consultaGemini}
-          disabled={loading || !pregunta}
+          disabled={loading || !productoSeleccionado}
           className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
         >
-          {loading ? "Consultando..." : "Enviar"}
+          {loading ? "Consultando..." : "Consulta IA"}
         </Button>
         {/* Área de respuesta simple */}
         <div className="p-4 border rounded min-h-[120px] max-h-[300px] overflow-auto whitespace-pre-wrap">
@@ -408,10 +429,7 @@ function Inventario() {
               className="pl-9"
               placeholder="Buscar producto"
               value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
-                setPagina(1);
-              }}
+              onChange={(e) => setQ(e.target.value)}
             />
           </div>
 
@@ -435,46 +453,54 @@ function Inventario() {
                     </td>
                   </tr>
                 )}
-                {paginados.map((p) => (
-                  <tr key={p.id} className="border-t border-border">
-                    <td className="p-3 font-mono text-xs">{p.code}</td>
-                    <td className="font-medium">
-                      {p.name.length > 50 ? p.name.slice(0, 50) + "…" : p.name}
-                    </td>
-                    <td className="text-muted-foreground">{p.category ?? "—"}</td>
-                    <td className="text-center">{money(Number(p.sale_price))}</td>
-                    <td className="text-center">
-                      <Badge
-                        variant={
-                          Number(p.stock) <= Number(p.min_stock) ? "destructive" : "secondary"
-                        }
-                      >
-                        {Number(p.stock)} / {Number(p.max_stock)}
-                      </Badge>
-                    </td>
-                    <td className="p-2 text-center">
-                      {can("inventario.ajustarstock") && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            setAjuste({
-                              ID_PRODUCTO: p.id,
-                              NOMBRE_PRODUCTO: p.name,
-                              CANTIDAD: Number(p.stock),
-                            })
+                {!isLoadingProductos &&
+                  paginados.map((p) => (
+                    <tr
+                      key={p.id}
+                      className={`border-t border-border cursor-pointer 
+                    bg-background text-foreground 
+                    hover:bg-accent hover:text-accent-foreground 
+                    focus:outline-none focus:ring-2 focus:ring-ring 
+                    ${productoSeleccionado === p.name ? "bg-accent text-accent-foreground" : ""}`}
+                      onClick={() => setProductoSeleccionado(p.name)}
+                    >
+                      <td className="p-3 font-mono text-xs">{p.code}</td>
+                      <td className="font-medium">
+                        {p.name.length > 50 ? p.name.slice(0, 50) + "…" : p.name}
+                      </td>
+                      <td className="text-muted-foreground">{p.category ?? "—"}</td>
+                      <td className="text-center">{money(Number(p.sale_price))}</td>
+                      <td className="text-center">
+                        <Badge
+                          variant={
+                            Number(p.stock) <= Number(p.min_stock) ? "destructive" : "secondary"
                           }
                         >
-                          Ajustar
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                          {Number(p.stock)} / {Number(p.max_stock)}
+                        </Badge>
+                      </td>
+                      <td className="p-2 text-center">
+                        {can("inventario.ajustarstock") && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setAjuste({
+                                ID_PRODUCTO: p.id,
+                                NOMBRE_PRODUCTO: p.name,
+                                CANTIDAD: Number(p.stock),
+                              })
+                            }
+                          >
+                            Ajustar
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
-
           {!isLoadingProductos && filtrados.length > 0 && (
             <div className="flex flex-col items-center justify-between gap-3 pt-2 sm:flex-row">
               <p className="text-xs text-muted-foreground">

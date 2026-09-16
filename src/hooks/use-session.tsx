@@ -8,44 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import { jwtDecode } from "jwt-decode";
-
-export type Rol = "administrador" | "supervisor" | "cajero" | "bodega";
-
-type SessionUser = {
-  USER_ID?: number;
-  NOMBRE?: string;
-  EMAIL?: string;
-  ID_EMPLEADO?: number;
-  ID_SUCURSAL?: string;
-  NOMBRE_SUCURSAL?: string;
-  [key: string]: unknown;
-};
-
-type JwtPayload = {
-  USER_ID?: number;
-  EMAIL?: string;
-  NOMBRE?: string;
-  ID_EMPLEADO?: number;
-  ID_SUCURSAL?: string;
-  NOMBRE_SUCURSAL?: string;
-  PERMISOS?: string[];
-  [key: string]: unknown;
-};
-
-type SessionCtx = {
-  session: { token: string; user: SessionUser } | null;
-  loading: boolean;
-  userId: number | null;
-  nombre: string;
-  email: string;
-  roles: Rol[];
-  permisos: string[];
-  sucursalId: string | null;
-  sucursalNombre: string;
-  empleadoId: number | null;
-  can: (perm: string) => boolean;
-  refresh: () => void;
-};
+import type { SessionUser, SessionCtx, JwtPayload } from "../types/genericTypes";
+import { toast } from "sonner";
 
 const Ctx = createContext<SessionCtx | null>(null);
 
@@ -59,13 +23,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const user = localStorage.getItem("auth_user");
 
     if (token && user) {
-      setSession({ token, user: JSON.parse(user) });
-      console.log("✅ [SessionProvider] Sesión encontrada:", JSON.parse(user).EMAIL);
+      try {
+        const decoded = jwtDecode<JwtPayload>(token);
+        console.log("🔎 [SessionProvider] Token decodificado:", decoded);
+
+        // Validar expiración
+        if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+          console.warn("⚠️ [SessionProvider] Token expirado, cerrando sesión...");
+          toast.warning("Sesion Expirada");
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("auth_user");
+          setSession(null);
+        } else {
+          setSession({ token, user: JSON.parse(user) });
+          console.log("✅ [SessionProvider] Sesión encontrada:", JSON.parse(user).EMAIL);
+        }
+      } catch (err) {
+        console.error("❌ [SessionProvider] Error decodificando token:", err);
+        setSession(null);
+      }
     } else {
       setSession(null);
       console.log("⚠️ [SessionProvider] No hay sesión activa");
     }
-
     setLoading(false);
   }, []);
 
@@ -75,12 +55,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     try {
       const decoded = jwtDecode<JwtPayload>(session.token);
-      console.log("🔎 [SessionProvider] Token decodificado:", decoded);
       const rawPerms: string[] = Array.isArray(decoded.PERMISOS)
         ? decoded.PERMISOS.filter((perm): perm is string => typeof perm === "string")
         : [];
-      console.log("🔎 [SessionProvider] Permisos crudos:", rawPerms);
-
       return [...new Set(rawPerms)];
     } catch (err) {
       console.error("❌ [SessionProvider] Error decodificando token:", err);
@@ -108,7 +85,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const token = localStorage.getItem("auth_token");
         const user = localStorage.getItem("auth_user");
         if (token && user) {
-          setSession({ token, user: JSON.parse(user) });
+          try {
+            const decoded = jwtDecode<JwtPayload>(token);
+            if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+              console.warn("⚠️ [SessionProvider] Token expirado al refrescar, cerrando sesión...");
+              localStorage.removeItem("auth_token");
+              localStorage.removeItem("auth_user");
+              setSession(null);
+            } else {
+              setSession({ token, user: JSON.parse(user) });
+            }
+          } catch {
+            setSession(null);
+          }
         } else {
           setSession(null);
         }
@@ -116,6 +105,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }),
     [session, loading, permisos, can],
   );
+
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

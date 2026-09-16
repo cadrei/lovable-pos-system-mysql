@@ -18,6 +18,7 @@ export const Route = createFileRoute("/_authenticated")({
       EMAIL?: string;
       NOMBRE?: string;
       PERMISOS?: string[];
+      exp?: number; // campo estándar de expiración en segundos
       [key: string]: unknown;
     };
 
@@ -28,6 +29,14 @@ export const Route = createFileRoute("/_authenticated")({
       const decoded = jwtDecode<JwtPayload>(session.token);
       console.log("🔎 [AuthRoute] Token decodificado:", decoded);
 
+      // 🔒 Validar expiración del token
+      if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+        console.warn("⚠️ [AuthRoute] Token expirado, redirigiendo a /auth");
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
+        throw redirect({ to: "/auth" });
+      }
+
       const rawPerms: string[] = Array.isArray(decoded.PERMISOS)
         ? decoded.PERMISOS.filter((perm): perm is string => typeof perm === "string")
         : [];
@@ -35,6 +44,7 @@ export const Route = createFileRoute("/_authenticated")({
       console.log("🔎 [AuthRoute] Permisos crudos:", rawPerms);
     } catch (err) {
       console.error("❌ [AuthRoute] Error decodificando token:", err);
+      throw redirect({ to: "/auth" });
     }
 
     return { user: session.user };
