@@ -35,6 +35,7 @@ import { insertProductoFn } from "@/server-functions/fnInsertProducto";
 import { ajustarInventarioFn } from "@/server-functions/fnAjustarInventario";
 import { getSubcategoriasFn } from "@/server-functions/fnGetSubcategorias";
 import { consultarGemini, consultarGeminiTest } from "@/server-functions/fngemini";
+import { consultaGroq } from "@/server-functions/fngroq";
 import { ProductoInsertRow, CategoriaRow, SubcategoriaRow } from "@/types/mysqltypes";
 import {
   Pagination,
@@ -85,7 +86,7 @@ function Inventario() {
     setLoading(true);
     setRespuesta("");
     try {
-      const promptIA = `Quiero un análisis detallado del producto ${productoSeleccionado}. 
+      const promptLargo = `Quiero un análisis detallado del producto ${productoSeleccionado}. 
           Incluye:
           - Descripción completa
           - Beneficios principales
@@ -94,13 +95,16 @@ function Inventario() {
           - Rango de edad o perfil de usuario adecuado
           - Precauciones o contraindicaciones
           - Comparación con productos similares si aplica`;
-      const promptCorto = `Resume el producto ${productoSeleccionado}. 
-          Incluye solo lo esencial:
+      const promptCorto = `Resume el producto ${productoSeleccionado} .En máximo 500 palabras.
+          Organiza la respuesta en 6 puntos:
             - Descripción
             - Beneficios principales
-            - Forma de uso
+            - Aplicaciones prácticas
+            - Uso recomendado
+            - Perfil de usuario adecuado
             - Precauciones`;
-      const data = await consultarGemini({ data: { prompt: promptCorto } });
+      //const data = await consultarGemini({ data: { prompt: promptCorto } });
+      const data = await consultaGroq({ data: { prompt: promptCorto } });
       setRespuesta(data.output ?? "No hubo respuesta");
     } catch (err) {
       console.error("Error en consulta:", err);
