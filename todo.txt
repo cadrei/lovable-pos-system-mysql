@@ -16,53 +16,13 @@ En cada seccion hay una nota "COMO TE PUEDO AYUDAR" con acciones concretas
 que puedo ejecutar si me lo pides.
 
 ================================================================================
-  1) route.tsx  (LAYOUT DE AUTENTICACION)
+  1) Login
 ================================================================================
-
---- 1. Estructura y proposito ---
-Archivo de layout para el grupo _authenticated. No renderiza UI propia mas alla
-de <Outlet />. Su rol es el guard de sesion: en beforeLoad llama a getSession(),
-si no hay sesion redirige a /auth, y decodifica el JWT para exponer PERMISOS.
-Usa ssr: false.
-  >> COMO TE PUEDO AYUDAR: puedo generar documentacion tecnica del flujo de auth
-     (diagrama Mermaid), extraer el decode del JWT a un helper reutilizable en
-     src/lib, y tipar correctamente el objeto PERMISOS.
-
---- 2. Estado actual ---
-Funciona como guard basico. Tiene console.log de depuracion en el beforeLoad.
-El resultado decodificado del JWT se usa sobre todo para logging; el consumo
-de PERMISOS queda implicito.
-  >> COMO TE PUEDO AYUDAR: puedo revisar si el guard cubre todos los casos
-     (token expirado, token corrupto, permisos vacios) y proponer pruebas.
-
---- 3. Optimizaciones posibles ---
-- Eliminar console.log de produccion.
-- Extraer decodeJwt + normalizacion de permisos a un modulo testeable.
-- Memoizar/centralizar la lista de permisos para evitar recalculos en cada nav.
-- Validar expiracion del token antes de confiar en el payload.
-  >> COMO TE PUEDO AYUDAR: puedo hacer el refactor a src/lib/auth-guard.ts con
-     tipos y tests, sin tocar la logica de rutas.
-
---- 4. Diseno responsivo ---
-No aplica (no renderiza UI). El layout responsivo vive en AppShell.
-  >> COMO TE PUEDO AYUDAR: puedo verificar que AppShell maneje bien el sidebar
-     colapsable en movil y tablet.
-
---- 5. Funcionalidad adicional ---
-- Refresh silencioso de sesion antes de expirar.
-- Redireccion con "returnTo" para volver a la pagina intentada.
-- Manejo de sesion multi-sucursal.
-  >> COMO TE PUEDO AYUDAR: puedo implementar returnTo y el refresh de token.
-
---- 6. UI/UX y embellecimiento ---
-No aplica. Podria mostrarse un loader mientras se valida la sesion.
-  >> COMO TE PUEDO AYUDAR: puedo agregar un fallback de carga (skeleton/spinner)
-     en el pendingComponent de la ruta.
-
---- 7. Recomendaciones finales ---
-Quitar logs, tipar permisos, agregar tests del guard y pendingComponent.
-  >> COMO TE PUEDO AYUDAR: puedo dejar una checklist y ejecutarla por partes.
-
+Implementar idle timeout de 5 minutos cuando el cajero esta fuera
+para desbloqueo por PIN, el PIN puede generarse de varias maneras
+Al inicio de sesion pin temporal guardado
+Gestionado por base de datos
+Pin Generico
 
 ================================================================================
   2) panel.tsx  (DASHBOARD PRINCIPAL)

@@ -114,7 +114,7 @@ export async function login(email: string, password: string): Promise<AuthResult
         PERMISOS: permisos,
       },
       JWT_SECRET,
-      { expiresIn: "1h" },
+      { expiresIn: "10h" },
     );
     console.log("✅ [auth.login] Login exitoso:", { email });
     await insertAuditoriaUsuario({
