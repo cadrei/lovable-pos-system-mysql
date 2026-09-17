@@ -508,7 +508,8 @@ Refactor del IIFE, shadcn Select y paginacion.
    Datasets grandes (productos=1485, kardex) se cargan completos en memoria.
    >> COMO TE PUEDO AYUDAR: puedo implementar limit/offset en las server functions.
 
-
+*Notas
+Pendiente: Implementar respaldo y recuperación offline en el POS, guardando ventas en IndexedDB/Dexie en el cliente y sincronizándolas automáticamente al reconectar, con UUID único por venta y proceso de sincronización en /src/services/sync.ts.
 ================================================================================
   FIN DEL DOCUMENTO
 ================================================================================

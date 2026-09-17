@@ -14,6 +14,7 @@ import {
   auditoriaLoginError,
 } from "@/types/mysqltypes";
 import { insertAuditoriaUsuario } from "./auditoriaUsuarios";
+import { mapMysqlErrorToUserMessage } from "./functions";
 
 const JWT_SECRET = process.env["JWT_SECRET"] ?? "secret";
 
@@ -83,14 +84,43 @@ export async function login(email: string, password: string): Promise<AuthResult
     });
     return { token, user };
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("❌ [auth.login] Error en login:", { email, message });
-    await insertAuditoriaUsuario({
+    const e = err as
+      | Partial<{
+          code: string;
+          errno: number;
+          sqlState: string;
+          sqlMessage: string;
+          message: string;
+          stack: string;
+        }>
+      | null
+      | undefined;
+    const code = e?.code ?? "UNKNOWN";
+    const errno = e?.errno ?? 0;
+    const sqlState = e?.sqlState ?? "";
+    const sqlMessage = e?.sqlMessage ?? "";
+    const message =
+      e?.message ||
+      sqlMessage ||
+      (typeof err === "string" ? err : "") ||
+      "Error desconocido al conectar con la base de datos";
+    console.error("❌ [auth.login] Error en login:", {
+      email,
+      code,
+      errno,
+      sqlState,
+      sqlMessage,
+      message,
+      raw: err,
+      stack: e?.stack,
+    });
+    /*await insertAuditoriaUsuario({
       ...auditoriaLoginError,
       USER_EMAIL: email,
       NEW_VALUE: message,
-    });
-    throw new Error(`[auth.login] ${message}`);
+    });*/
+    const userMessage = mapMysqlErrorToUserMessage(code, message);
+    throw new Error(`❌ Error al ingresar: ${userMessage}`);
   }
 }
 
