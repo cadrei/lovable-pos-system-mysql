@@ -51,7 +51,7 @@ type Linea = {
 
 function POS() {
   const qc = useQueryClient();
-  const { nombre: cajero, sucursalId } = useSession();
+  const { nombre: cajero, sucursalId, empleadoId } = useSession();
   const [busqueda, setBusqueda] = useState("");
   const [carrito, setCarrito] = useState<Linea[]>([]);
   const [clienteId, setClienteId] = useState<string>("");
@@ -172,6 +172,7 @@ function POS() {
   const total = +(subtotal + impuesto).toFixed(3);
   // Cambio (solo aplica si es efectivo)
   const cambio = Math.max(0, +(recibido - total).toFixed(3));
+
   const cobrar = useMutation({
     mutationFn: async () => {
       if (!carrito.length) throw new Error("El carrito está vacío");
@@ -188,7 +189,7 @@ function POS() {
         data: {
           idSucursal: sucursalId, // Sucursal de la Sesion
           idCliente: Number(clienteId),
-          idEmpleado: 7,
+          idEmpleado: empleadoId ?? 0,
           metodo: metodo, // forma de pago (ej. 'EFECTIVO', 'TARJETA')
           referencia: numeroDocumento, // opcional
           idTipoImpuesto: "IMP01",
