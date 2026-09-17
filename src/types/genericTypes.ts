@@ -32,6 +32,7 @@ export type SessionUser = {
   ID_EMPLEADO?: number;
   ID_SUCURSAL?: string;
   NOMBRE_SUCURSAL?: string;
+  SESSION_ID?: string;
   [key: string]: unknown;
 };
 
@@ -40,6 +41,7 @@ export type JwtPayload = {
   EMAIL?: string;
   NOMBRE?: string;
   PERMISOS?: string[];
+  SESSION_ID?: string; // 🔹 Nuevo campo para validación de sesión única
   exp?: number; // campo estándar de expiración en segundos
   [key: string]: unknown;
 };

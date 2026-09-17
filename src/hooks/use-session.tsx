@@ -10,6 +10,8 @@ import {
 import { jwtDecode } from "jwt-decode";
 import type { SessionUser, SessionCtx, JwtPayload } from "../types/genericTypes";
 import { toast } from "sonner";
+import { fnSessionValidate } from "@/server-functions/fnSessionValidate";
+import { fnSessionClearBackend } from "@/server-functions/fnSessionClear";
 
 const Ctx = createContext<SessionCtx | null>(null);
 
@@ -17,63 +19,108 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<{ token: string; user: SessionUser } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 1. Carga inicial de sesión
-  useEffect(() => {
-    console.log("🔵 [SessionProvider] Cargando sesión desde localStorage...");
-    const token = localStorage.getItem("auth_token");
-    const user = localStorage.getItem("auth_user");
-
-    if (token && user) {
-      try {
-        const decoded = jwtDecode<JwtPayload>(token);
-        console.log("🔎 [SessionProvider] Token decodificado:", decoded);
-
-        if (decoded.exp && Date.now() >= decoded.exp * 1000) {
-          console.warn("⚠️ [SessionProvider] Token expirado, cerrando sesión...");
-          toast.warning("Sesión expirada");
-          localStorage.removeItem("auth_token");
-          localStorage.removeItem("auth_user");
-          setSession(null);
-        } else {
-          setSession({ token, user: JSON.parse(user) });
-          console.log("✅ [SessionProvider] Sesión encontrada:", JSON.parse(user).EMAIL);
-        }
-      } catch (err) {
-        console.error("❌ [SessionProvider] Error decodificando token:", err);
-        setSession(null);
-      }
-    } else {
-      setSession(null);
-      console.log("⚠️ [SessionProvider] No hay sesión activa");
+  // 🔹 Función para cerrar sesión
+  const logout = useCallback((reason?: string) => {
+    console.log("🔴 [SessionProvider] Cerrando sesión:", reason);
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
+    setSession(null);
+    if (reason) {
+      toast.warning(reason);
     }
-    setLoading(false);
   }, []);
 
-  // 🔹 2. Función refresh independiente
-  const refresh = useCallback(() => {
-    console.log("🔵 [SessionProvider] Refrescando sesión...");
-    toast.info("🔄 Sesión extendida automáticamente");
-    const token = localStorage.getItem("auth_token");
-    const user = localStorage.getItem("auth_user");
+  // 🔹 1. Carga inicial de sesión con validación de SESSION_ID
+  useEffect(() => {
+    const validateAndLoadSession = async () => {
+      console.log("🔵 [SessionProvider] Cargando sesión desde localStorage...");
+      const token = localStorage.getItem("auth_token");
+      const userRaw = localStorage.getItem("auth_user");
 
-    if (token && user) {
+      if (token && userRaw) {
+        try {
+          const decoded = jwtDecode<JwtPayload>(token);
+          console.log("🔎 [SessionProvider] Token decodificado:", decoded);
+
+          if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+            console.warn("⚠️ [SessionProvider] Token expirado, cerrando sesión...");
+            logout("Sesión expirada");
+            return;
+          }
+
+          // 🔹 Validar SESSION_ID si existe en el token
+          if (decoded.SESSION_ID && decoded.USER_ID) {
+            console.log("🔎 [SessionProvider] Validando SESSION_ID...");
+            try {
+              const result = await fnSessionValidate({
+                data: { userId: decoded.USER_ID, sessionToken: decoded.SESSION_ID },
+              });
+
+              if (!result.success || !result.data?.isValid) {
+                console.warn("⚠️ [SessionProvider] Sesión invalidada desde otro dispositivo");
+                logout("Tu sesión fue cerrada porque iniciaste sesión en otro dispositivo");
+                return;
+              }
+              console.log("✅ [SessionProvider] SESSION_ID válido");
+            } catch (err) {
+              console.error("❌ [SessionProvider] Error validando SESSION_ID:", err);
+              // Si falla la validación, permitir sesión pero sin validar
+            }
+          }
+          setSession({ token, user: JSON.parse(userRaw) });
+          console.log("✅ [SessionProvider] Sesión encontrada:", JSON.parse(userRaw).EMAIL);
+        } catch (err) {
+          console.error("❌ [SessionProvider] Error decodificando token:", err);
+          logout();
+        }
+      } else {
+        setSession(null);
+        console.log("⚠️ [SessionProvider] No hay sesión activa");
+      }
+      setLoading(false);
+    };
+    validateAndLoadSession();
+  }, [logout]);
+
+  // 🔹 2. Función refresh independiente con validación de sesión
+  const refresh = useCallback(async () => {
+    console.log("🔵 [SessionProvider] Refrescando sesión...");
+    const token = localStorage.getItem("auth_token");
+    const userRaw = localStorage.getItem("auth_user");
+    if (token && userRaw) {
       try {
         const decoded = jwtDecode<JwtPayload>(token);
+
         if (decoded.exp && Date.now() >= decoded.exp * 1000) {
           console.warn("⚠️ [SessionProvider] Token expirado al refrescar, cerrando sesión...");
-          localStorage.removeItem("auth_token");
-          localStorage.removeItem("auth_user");
-          setSession(null);
-        } else {
-          setSession({ token, user: JSON.parse(user) });
+          logout("Sesión expirada");
+          return;
         }
-      } catch {
-        setSession(null);
+        // 🔹 Validar SESSION_ID al refrescar
+        if (decoded.SESSION_ID && decoded.USER_ID) {
+          try {
+            const result = await fnSessionValidate({
+              data: { userId: decoded.USER_ID, sessionToken: decoded.SESSION_ID },
+            });
+
+            if (!result.success || !result.data?.isValid) {
+              console.warn("⚠️ [SessionProvider] Sesión invalidada durante refresh");
+              logout("Tu sesión fue cerrada porque iniciaste sesión en otro dispositivo");
+              return;
+            }
+          } catch (err) {
+            console.error("❌ [SessionProvider] Error validando SESSION_ID en refresh:", err);
+          }
+        }
+        setSession({ token, user: JSON.parse(userRaw) });
+      } catch (err) {
+        console.error("❌ [SessionProvider] Error en refresh:", err);
+        logout();
       }
     } else {
-      setSession(null);
+      logout();
     }
-  }, []);
+  }, [logout]);
 
   // 🔹 3. Refresh silencioso automático
   /* useEffect(() => {
@@ -135,7 +182,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }),
     [session, loading, permisos, can, refresh],
   );
-
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

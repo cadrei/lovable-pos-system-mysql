@@ -1,76 +1,27 @@
 import pool from "../../../database/mysqlpool";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import type { RowDataPacket } from "mysql2";
-import { AuditoriaUsuarioInsert } from "@/types/mysqltypes";
+import {
+  AuditoriaUsuarioInsert,
+  UsuarioRow,
+  AuthResult,
+  auditoriaBase,
+  auditoriaLoginUsuarioNoEncontrado,
+  auditoriaLoginPasswordIncorrecta,
+  auditoriaLoginExitoso,
+  auditoriaLoginError,
+} from "@/types/mysqltypes";
 import { insertAuditoriaUsuario } from "./auditoriaUsuarios";
 
 const JWT_SECRET = process.env["JWT_SECRET"] ?? "secret";
-
-export interface UsuarioRow extends RowDataPacket {
-  USER_ID: number;
-  NOMBRE: string;
-  NOMBRE_USUARIO: string;
-  EMAIL: string;
-  TELEFONO?: string;
-  ID_SUCURSAL?: string;
-  PASSWORD_HASH: string;
-  ESTADO: string;
-  ULTIMO_LOGIN?: Date;
-}
-
-export interface AuthResult {
-  token: string;
-  user: UsuarioRow;
-}
-
-// Plantillas base de auditoría
-const auditoriaBase: AuditoriaUsuarioInsert = {
-  USER_ID: 0,
-  USER_EMAIL: "",
-  ACTION: "LOGIN",
-  MODULE: "AUTH",
-  ENTITY: "USUARIOS",
-  ENTITY_ID: null,
-  OLD_VALUE: null,
-  NEW_VALUE: null,
-  IP: null, // aquí puedes pasar la IP si la capturas en la request
-};
-// Plantilla: login fallido por usuario inexistente/inactivo
-const auditoriaLoginUsuarioNoEncontrado: AuditoriaUsuarioInsert = {
-  ...auditoriaBase,
-  ACTION: "LOGIN_FAIL",
-  NEW_VALUE: "Usuario no encontrado o inactivo",
-};
-
-// Plantilla: login fallido por contraseña incorrecta
-const auditoriaLoginPasswordIncorrecta: AuditoriaUsuarioInsert = {
-  ...auditoriaBase,
-  ACTION: "LOGIN_FAIL",
-  NEW_VALUE: "Contraseña incorrecta",
-};
-
-// Plantilla: login exitoso
-const auditoriaLoginExitoso: AuditoriaUsuarioInsert = {
-  ...auditoriaBase,
-  ACTION: "LOGIN_SUCCESS",
-  NEW_VALUE: "Usuario autenticado correctamente",
-};
-
-// Plantilla: error inesperado en login
-const auditoriaLoginError: AuditoriaUsuarioInsert = {
-  ...auditoriaBase,
-  ACTION: "LOGIN_ERROR",
-  NEW_VALUE: "Error inesperado en login",
-};
 
 export async function login(email: string, password: string): Promise<AuthResult> {
   try {
     console.log("🔵 [auth.login] Ejecutando consulta de login con email:", { email });
     const [rows] = await pool.query<UsuarioRow[]>(
-      `SELECT u.USER_ID,u.NOMBRE,u.EMAIL,u.PASSWORD_HASH,u.ESTADO,
-              e.ID_EMPLEADO,e.NOMBRES AS NOMBRE_EMPLEADO,
-              s.ID_SUCURSAL,s.NOMBRE_SUCURSAL
+      `SELECT u.USER_ID,u.NOMBRE,u.EMAIL,u.PASSWORD_HASH,u.ESTADO,e.ID_EMPLEADO,e.NOMBRES AS NOMBRE_EMPLEADO,s.ID_SUCURSAL,s.NOMBRE_SUCURSAL
        FROM USUARIOS u
        JOIN EMPLEADO e ON u.ID_EMPLEADO = e.ID_EMPLEADO
        JOIN SUCURSALES s ON e.ID_SUCURSAL = s.ID_SUCURSAL
@@ -103,6 +54,12 @@ export async function login(email: string, password: string): Promise<AuthResult
     console.log("🔵 [auth.login] Obteniendo permisos del usuario:", { userId: user.USER_ID });
     const permisos = await getPermisosUsuario(user.USER_ID);
     //console.log("✅ [auth.login] Permisos obtenidos:", { userId: user.USER_ID, permisos });
+
+    // 🔹 Generar token de sesión único
+    console.log("🔵 [auth.login] Generando SESSION_ID único:", { userId: user.USER_ID });
+    const sessionToken = generateSessionToken();
+    await updateSessionToken(user.USER_ID, sessionToken);
+
     console.log("🔵 [auth.login] Generando token JWT:", { userId: user.USER_ID });
     const token = jwt.sign(
       {
@@ -111,6 +68,7 @@ export async function login(email: string, password: string): Promise<AuthResult
         NOMBRE: user.NOMBRE,
         NOMBRE_USUARIO: user.NOMBRE_USUARIO,
         ID_SUCURSAL: user.ID_SUCURSAL,
+        SESSION_ID: sessionToken, // 🔹 Nuevo campo en el payload
         PERMISOS: permisos,
       },
       JWT_SECRET,
@@ -161,6 +119,76 @@ export async function getPermisosUsuario(userId: number): Promise<string[]> {
   }
 }
 
+/**
+ * Genera un token de sesión único para control de sesión única
+ */
+function generateSessionToken(): string {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+/**
+ * Actualiza el SESSION_ID del usuario en la base de datos
+ * Esto invalida cualquier sesión anterior del mismo usuario
+ */
+export async function updateSessionToken(userId: number, sessionToken: string): Promise<void> {
+  try {
+    console.log("🔵 [auth.updateSessionToken] Actualizando SESSION_ID para usuario:", { userId });
+    await pool.query("UPDATE USUARIOS SET SESSION_ID = ? WHERE USER_ID = ?", [
+      sessionToken,
+      userId,
+    ]);
+    console.log("✅ [auth.updateSessionToken] SESSION_ID actualizado correctamente");
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("❌ [auth.updateSessionToken] Error al actualizar SESSION_ID:", {
+      userId,
+      message,
+    });
+    throw new Error(`[auth.updateSessionToken] ${message}`);
+  }
+}
+
+/**
+ * Valida si el sessionToken proporcionado coincide con el almacenado en BD
+ * Retorna true si la sesión es válida, false si fue invalidada (otro login)
+ */
+export async function validateSessionToken(userId: number, sessionToken: string): Promise<boolean> {
+  try {
+    console.log("🔵 [auth.validateSessionToken] Validando sesión para usuario:", { userId });
+    const [rows] = await pool.query<UsuarioRow[]>(
+      "SELECT SESSION_ID FROM USUARIOS WHERE USER_ID = ?",
+      [userId],
+    );
+    if (!rows || rows.length === 0) {
+      console.warn("⚠️ [auth.validateSessionToken] Usuario no encontrado:", { userId });
+      return false;
+    }
+    const storedToken = rows[0]?.SESSION_ID;
+    const isValid = storedToken === sessionToken;
+    console.log("✅ [auth.validateSessionToken] Sesión válida:", { isValid });
+    return isValid;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("❌ [auth.validateSessionToken] Error al validar sesión:", { userId, message });
+    throw new Error(`[auth.validateSessionToken] ${message}`);
+  }
+}
+
+/**
+ * Limpia el SESSION_ID del usuario (logout a nivel de BD)
+ */
+export async function clearSessionToken(userId: number): Promise<void> {
+  try {
+    console.log("🔵 [auth.clearSessionToken] Limpiando SESSION_ID para usuario:", { userId });
+    await pool.query("UPDATE USUARIOS SET SESSION_ID = NULL WHERE USER_ID = ?", [userId]);
+    console.log("✅ [auth.clearSessionToken] SESSION_ID limpiado correctamente");
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("❌ [auth.clearSessionToken] Error al limpiar SESSION_ID:", { userId, message });
+    throw new Error(`[auth.clearSessionToken] ${message}`);
+  }
+}
+
 export async function register(
   nombre: string,
   nombreUsuario: string,
@@ -172,7 +200,6 @@ export async function register(
   try {
     console.log("🔵 [auth.register] Encriptando contraseña: ", { email, nombreUsuario });
     const hash = await bcrypt.hash(password, 10);
-
     console.log("🔵 [auth.register] Insertando nuevo usuario: ", { email, nombreUsuario });
     await pool.query(
       `INSERT INTO USUARIOS (NOMBRE, NOMBRE_USUARIO, EMAIL, TELEFONO, ID_SUCURSAL, PASSWORD_HASH, ESTADO)

@@ -41,12 +41,26 @@ export async function getSession(): Promise<SessionData | null> {
 
 /**
  * Elimina la sesión actual (logout).
+ * Si se proporciona userId, también limpia el SESSION_ID en la base de datos.
  */
 export async function clearSession(userId?: number, userEmail?: string): Promise<void> {
   try {
+    // 🔹 Limpiar SESSION_ID en la base de datos si hay userId
+    if (userId) {
+      try {
+        const { fnSessionClearBackend } = await import("@/server-functions/fnSessionClear");
+        await fnSessionClearBackend({ data: { userId } });
+        console.log("✅ [session.clearSession] SESSION_ID limpiado en BD");
+      } catch (err) {
+        console.error("⚠️ [session.clearSession] Error limpiando SESSION_ID en BD:", err);
+        // Continuar con el logout local aunque falle la limpieza en BD
+      }
+    }
+
+    // 🔹 Limpiar localStorage
     localStorage.removeItem("auth_token");
     localStorage.removeItem("auth_user");
-    console.log("✅ [session.clearSession] Sesión eliminada");
+    console.log("✅ [session.clearSession] Sesión eliminada de localStorage");
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("❌ [session.clearSession] Error al eliminar sesión", { message });

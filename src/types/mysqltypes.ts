@@ -997,3 +997,61 @@ export type LaboratorioInsert = {
   DESCRIPCION?: string;
   ESTADO?: "A" | "I" | "S" | "P" | "E" | "O" | "R" | "T"; // por defecto 'A'
 };
+
+export interface UsuarioRow extends RowDataPacket {
+  USER_ID: number;
+  NOMBRE: string;
+  NOMBRE_USUARIO: string;
+  EMAIL: string;
+  TELEFONO?: string;
+  ID_SUCURSAL?: string;
+  PASSWORD_HASH: string;
+  ESTADO: string;
+  ULTIMO_LOGIN?: Date;
+  SESSION_ID?: string;
+}
+
+export interface AuthResult {
+  token: string;
+  user: UsuarioRow;
+}
+
+// Plantillas base de auditoría
+export const auditoriaBase: AuditoriaUsuarioInsert = {
+  USER_ID: 0,
+  USER_EMAIL: "",
+  ACTION: "LOGIN",
+  MODULE: "AUTH",
+  ENTITY: "USUARIOS",
+  ENTITY_ID: null,
+  OLD_VALUE: null,
+  NEW_VALUE: null,
+  IP: null, // aquí puedes pasar la IP si la capturas en la request
+};
+// Plantilla: login fallido por usuario inexistente/inactivo
+export const auditoriaLoginUsuarioNoEncontrado: AuditoriaUsuarioInsert = {
+  ...auditoriaBase,
+  ACTION: "LOGIN_FAIL",
+  NEW_VALUE: "Usuario no encontrado o inactivo",
+};
+
+// Plantilla: login fallido por contraseña incorrecta
+export const auditoriaLoginPasswordIncorrecta: AuditoriaUsuarioInsert = {
+  ...auditoriaBase,
+  ACTION: "LOGIN_FAIL",
+  NEW_VALUE: "Contraseña incorrecta",
+};
+
+// Plantilla: login exitoso
+export const auditoriaLoginExitoso: AuditoriaUsuarioInsert = {
+  ...auditoriaBase,
+  ACTION: "LOGIN_SUCCESS",
+  NEW_VALUE: "Usuario autenticado correctamente",
+};
+
+// Plantilla: error inesperado en login
+export const auditoriaLoginError: AuditoriaUsuarioInsert = {
+  ...auditoriaBase,
+  ACTION: "LOGIN_ERROR",
+  NEW_VALUE: "Error inesperado en login",
+};
