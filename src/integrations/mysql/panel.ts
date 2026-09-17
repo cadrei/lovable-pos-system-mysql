@@ -13,8 +13,8 @@ export async function getPanelData(
       desdeMysql,
     });
     const [ventas] = await pool.query<(VentaRow & RowDataPacket)[]>(
-      "SELECT * FROM v_ventas WHERE fechaHora >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) AND fechaHora <= NOW() AND idSucursal = ? ORDER BY fechaHora DESC",
-      //"SELECT * FROM v_ventas WHERE fechaHora >= ? AND fechaHora <= NOW() ORDER BY fechaHora DESC",
+      //"SELECT * FROM v_ventas WHERE fechaHora >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) AND fechaHora <= NOW() AND idSucursal = ? ORDER BY fechaHora DESC",
+      "SELECT * FROM v_ventas WHERE fechaHora >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) AND fechaHora <= NOW() ORDER BY fechaHora DESC",
       [sucursalId],
     );
     const [productos] = await pool.query<(ProductoRow & RowDataPacket)[]>(

@@ -527,6 +527,7 @@ CREATE TABLE USUARIOS (
   TELEFONO 				VARCHAR(20) COMMENT 'Telefono de contacto',
   PASSWORD_HASH 		VARCHAR(255) NOT NULL COMMENT 'Contraseña encriptada del usuario',
   ESTADO 				CHAR(1) DEFAULT 'A' COMMENT 'Estado del empleado: A=Activo, I=Inactivo, S= Suspendido, P=Pendiente, E= En Espera, O=Obsoleto, R=Reservado, T=Test',
+  SESSION_ID 			VARCHAR(255) NULL UNIQUE COMMENT 'Token de sesión activo para control de sesión única',
   ULTIMO_LOGIN			DATETIME COMMENT 'Fecha y hora de ultimo ingreso al sistema',
   FECHA_CREACION		DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha y hora de creación del usuario',
   FECHA_MODIFICACION	DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Fecha y hora de la última actualización',

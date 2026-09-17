@@ -1,6 +1,15 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, DollarSign, Receipt, ShoppingCart, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  DollarSign,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Receipt,
+  ShoppingCart,
+  TrendingUp,
+} from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -10,10 +19,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Pagination,
   PaginationContent,
@@ -23,6 +35,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { fechaHora, money } from "@/lib/format";
 import { useSession } from "@/hooks/use-session";
 import { panelFn } from "@/server-functions/fnpanel";
@@ -85,6 +105,58 @@ function Panel() {
   const [page, setPage] = useState(0);
   const pageSize = 8;
 
+  // Filtro por sucursal
+  const [sucursalFilter, setSucursalFilter] = useState<string>(sucursalId?.toString() ?? "todas");
+
+  // Filtro por rango de fechas
+  const [dateRange, setDateRange] = useState<{
+    from: Date | null;
+    to: Date | null;
+  } | null>(null);
+
+  // Calcular el rango máximo disponible basado en los datos
+  const maxDateRange = useMemo(() => {
+    if (!data?.ventas || data.ventas.length === 0) {
+      return { from: new Date(), to: new Date() };
+    }
+    const fechas = data.ventas.map((v) => new Date(v.fechaHora).getTime());
+    return {
+      from: new Date(Math.min(...fechas)),
+      to: new Date(Math.max(...fechas)),
+    };
+  }, [data?.ventas]);
+
+  // Establecer el rango inicial cuando cargan los datos
+  useMemo(() => {
+    if (data?.ventas && !dateRange) {
+      setDateRange(maxDateRange);
+    }
+  }, [data?.ventas, dateRange, maxDateRange]);
+
+  // Filtrar ventas por sucursal y rango de fechas
+  const filteredVentas = useMemo(() => {
+    if (!data?.ventas) return [];
+
+    let result = data.ventas;
+
+    // Filtrar por sucursal (si no es "todas")
+    if (sucursalFilter !== "todas") {
+      result = result.filter((v) => String(v.idSucursal) === sucursalFilter);
+    }
+
+    // Filtrar por rango de fechas
+    if (dateRange?.from && dateRange?.to) {
+      const fromTime = dateRange.from.setHours(0, 0, 0, 0);
+      const toTime = dateRange.to.setHours(23, 59, 59, 999);
+      result = result.filter((v) => {
+        const ventaTime = new Date(v.fechaHora).getTime();
+        return ventaTime >= fromTime && ventaTime <= toTime;
+      });
+    }
+
+    return result;
+  }, [data?.ventas, sucursalFilter, dateRange]);
+
   // Memoizar cálculos pesados que NO dependen de la paginación
   const {
     ventas,
@@ -113,8 +185,8 @@ function Panel() {
       };
     }
 
-    // Ventas completadas
-    const ventas = (data?.ventas ?? []).filter((v) => v.estadoPago === "C");
+    // Ventas completadas (ya filtradas por sucursal y fecha en filteredVentas)
+    const ventas = filteredVentas.filter((v) => v.estadoPago === "C");
 
     // Ventas de hoy
     const hoy = new Date().toDateString();
@@ -132,7 +204,7 @@ function Panel() {
       0,
     );
 
-    // Productos bajo stock
+    // Productos bajo stock (se mantiene igual, no depende del filtro)
     const bajoStock = (data?.productos ?? []).filter(
       (p) => Number(p.cantidad) > 1 && Number(p.cantidad) < Number(p.stockMin),
     );
@@ -140,7 +212,7 @@ function Panel() {
     // --- Promedio de venta ---
     const ticketPromedio = ventas.length > 0 ? totalMes / ventas.length : 0;
 
-    // --- Serie últimos 14 días ---
+    // --- Serie últimos 14 días (usando ventas filtradas) ---
     const serie: { dia: string; ventas: number }[] = [];
     for (let i = 13; i >= 0; i--) {
       const d = new Date(Date.now() - i * 86400000);
@@ -150,8 +222,8 @@ function Panel() {
         month: "2-digit",
         day: "2-digit",
       });
-      // Ventas de ese día usando comparación local
-      const ventasDia = (data?.ventas ?? [])
+      // Ventas de ese día usando comparación local con datos filtrados
+      const ventasDia = ventas
         .filter((v) => {
           const fechaVentaLocal = new Date(v.fechaHora).toLocaleDateString("es-EC", {
             year: "numeric",
@@ -175,13 +247,13 @@ function Panel() {
         icon: DollarSign,
       },
       {
-        label: "Ventas 30 días",
+        label: "Ventas del período",
         value: money(totalMes),
         sub: `${ventas.length} transacciones`,
         icon: ShoppingCart,
       },
       {
-        label: "Utilidad bruta 30 días",
+        label: "Utilidad bruta del período",
         value: money(utilidad),
         sub: "Ingresos menos descuentos e impuestos",
         icon: TrendingUp,
@@ -206,12 +278,46 @@ function Panel() {
       kpis,
       totalPages: Math.ceil(bajoStock.length / pageSize),
     };
-  }, [data]);
+  }, [data, filteredVentas, pageSize]);
 
   // Memoizar solo el slice de paginación (cálculo ligero con diff acotado)
   const productosPagina = useMemo(() => {
     return bajoStock.slice(page * pageSize, (page + 1) * pageSize);
   }, [bajoStock, page]);
+
+  // Función para exportar a CSV
+  const exportToCSV = () => {
+    if (!data) return;
+
+    // Exportar KPIs
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "INDICADOR,VALOR\n";
+    kpis.forEach((kpi) => {
+      csvContent += `"${kpi.label}","${kpi.value}"\n`;
+    });
+    csvContent += "\n";
+
+    // Exportar ventas recientes
+    csvContent += "NUMERO,FECHA,CAJERO,TOTAL\n";
+    filteredVentas.slice(0, 8).forEach((v) => {
+      const fechaVenta =
+        typeof v.fechaHora === "string" ? v.fechaHora : new Date(v.fechaHora).toISOString();
+      csvContent += `"${v.referenciaPago}","${fechaHora(fechaVenta)}","${v.empleado ?? "—"}","${money(Number(v.total))}"\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `panel_${format(new Date(), "yyyy-MM-dd")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Función para exportar a PDF (usando window.print como solución simple)
+  const exportToPDF = () => {
+    window.print();
+  };
 
   if (loading) {
     // 🔒 Protección de ruta
@@ -229,15 +335,114 @@ function Panel() {
       title="Panel general"
       subtitle="Resumen operativo del negocio"
       actions={
-        <Button asChild>
-          <Link to="/ventas">Nueva venta</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" />
+                Exportar
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-3" align="end">
+              <div className="grid gap-2">
+                <Button variant="outline" onClick={exportToCSV} className="justify-start">
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Exportar a CSV
+                </Button>
+                <Button variant="outline" onClick={exportToPDF} className="justify-start">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Exportar a PDF
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button asChild>
+            <Link to="/ventas">Nueva venta</Link>
+          </Button>
+        </div>
       }
     >
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Cargando indicadores…</p>
       ) : (
         <div className="space-y-6">
+          {/* Filtros */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Filtro por sucursal */}
+            <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Seleccionar sucursal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">TODAS</SelectItem>
+                {sucursales?.map((s) => (
+                  <SelectItem key={s.ID_SUCURSAL} value={s.ID_SUCURSAL.toString()}>
+                    {s.NOMBRE_SUCURSAL}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Filtro por rango de fechas */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="mr-2 h-4 w-4"
+                  >
+                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                    <line x1="16" x2="16" y1="2" y2="6" />
+                    <line x1="8" x2="8" y1="2" y2="6" />
+                    <line x1="3" x2="21" y1="10" y2="10" />
+                  </svg>
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "dd MMM yyyy", { locale: es })} -{" "}
+                        {format(dateRange.to, "dd MMM yyyy", { locale: es })}
+                      </>
+                    ) : (
+                      format(dateRange.from, "dd MMM yyyy", { locale: es })
+                    )
+                  ) : (
+                    <span>Seleccionar rango</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange?.from ?? maxDateRange.from}
+                  selected={{ from: dateRange?.from ?? undefined, to: dateRange?.to ?? undefined }}
+                  onSelect={(range) => {
+                    if (range) {
+                      setDateRange({
+                        from: range.from ?? null,
+                        to: range.to ?? null,
+                      });
+                    }
+                  }}
+                  disabled={(date) => {
+                    // Deshabilitar fechas fuera del rango máximo disponible
+                    const minDate = maxDateRange.from.getTime();
+                    const maxDate = maxDateRange.to.getTime();
+                    const currentTime = date.getTime();
+                    return currentTime < minDate || currentTime > maxDate;
+                  }}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {kpis.map(({ label, value, sub, icon: Icon }) => (
               <div key={label} className="stat-tile">
