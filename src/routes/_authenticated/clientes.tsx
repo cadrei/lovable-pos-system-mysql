@@ -9,6 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -49,6 +58,8 @@ function Clientes() {
   const { can } = useSession();
   const [q, setQ] = useState("");
   const [abierto, setAbierto] = useState(false);
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
   const [form, setForm] = useState({
     id_type: "cedula" as (typeof tipos)[number],
     id_number: "",
@@ -88,6 +99,12 @@ function Clientes() {
         (c.email ?? "").toLowerCase().includes(s),
     );
   }, [clientes, q]);
+
+  const totalPages = Math.ceil(filtrados.length / pageSize);
+
+  const clientesPagina = useMemo(() => {
+    return filtrados.slice(page * pageSize, (page + 1) * pageSize);
+  }, [filtrados, page]);
 
   const crear = useMutation({
     mutationFn: async () => {
@@ -251,7 +268,14 @@ function Clientes() {
                   </td>
                 </tr>
               )}
-              {filtrados.map((c) => (
+              {!isLoading && filtrados.length === 0 && (
+                <tr>
+                  <td className="p-3 text-muted-foreground text-center" colSpan={5}>
+                    No se encontraron clientes
+                  </td>
+                </tr>
+              )}
+              {clientesPagina.map((c) => (
                 <tr key={c.id} className="border-t border-border">
                   <td className="p-3 font-mono text-xs">{c.id_number}</td>
                   <td className="font-medium">
@@ -269,6 +293,131 @@ function Clientes() {
             </tbody>
           </table>
         </div>
+
+        {/* Controles de paginación */}
+        {totalPages > 1 && (
+          <div className="w-full overflow-x-auto">
+            <Pagination className="justify-center">
+              <PaginationContent className="flex-nowrap">
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (page > 0) setPage(page - 1);
+                    }}
+                    className={page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+
+                {(() => {
+                  const items = [];
+                  const maxVisible = 5;
+
+                  // Siempre mostrar primera página
+                  items.push(
+                    <PaginationItem key={0}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(0);
+                        }}
+                        isActive={page === 0}
+                        className="cursor-pointer"
+                      >
+                        1
+                      </PaginationLink>
+                    </PaginationItem>,
+                  );
+
+                  // Calcular rango de páginas visibles alrededor de la actual
+                  let start = Math.max(1, page - 1);
+                  let end = Math.min(totalPages - 2, page + 1);
+
+                  // Ajustar para mantener maxVisible páginas en el centro
+                  const visibleCount = end - start + 1;
+                  if (visibleCount < maxVisible && start === 1) {
+                    end = Math.min(totalPages - 2, start + maxVisible - 1);
+                  } else if (visibleCount < maxVisible && end === totalPages - 2) {
+                    start = Math.max(1, end - maxVisible + 1);
+                  }
+
+                  // Ellipsis después de la primera página si es necesario
+                  if (start > 1) {
+                    items.push(
+                      <PaginationItem key="ellipsis-start">
+                        <PaginationEllipsis />
+                      </PaginationItem>,
+                    );
+                  }
+
+                  // Páginas intermedias
+                  for (let i = start; i <= end; i++) {
+                    items.push(
+                      <PaginationItem key={i}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPage(i);
+                          }}
+                          isActive={i === page}
+                          className="cursor-pointer"
+                        >
+                          {i + 1}
+                        </PaginationLink>
+                      </PaginationItem>,
+                    );
+                  }
+
+                  // Ellipsis antes de la última página si es necesario
+                  if (end < totalPages - 2) {
+                    items.push(
+                      <PaginationItem key="ellipsis-end">
+                        <PaginationEllipsis />
+                      </PaginationItem>,
+                    );
+                  }
+
+                  // Siempre mostrar última página si hay más de 1 página
+                  if (totalPages > 1) {
+                    items.push(
+                      <PaginationItem key={totalPages - 1}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPage(totalPages - 1);
+                          }}
+                          isActive={page === totalPages - 1}
+                          className="cursor-pointer"
+                        >
+                          {totalPages}
+                        </PaginationLink>
+                      </PaginationItem>,
+                    );
+                  }
+
+                  return items;
+                })()}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (page < totalPages - 1) setPage(page + 1);
+                    }}
+                    className={
+                      page === totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </div>
     </AppShell>
   );
