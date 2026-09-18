@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { login } from "../integrations/mysql/auth";
-import { getPermisosUsuario } from "../integrations/mysql/auth";
+import { login, getPermisosUsuario } from "../integrations/mysql/auth";
+import { notifyLogin } from "./mailer/notifyLogin.server";
 
 export const loginFn = createServerFn({ method: "POST" }).handler(async ({ data }) => {
   const { email, password } = (data ?? {}) as {
@@ -9,12 +9,31 @@ export const loginFn = createServerFn({ method: "POST" }).handler(async ({ data 
   };
   try {
     if (!email || !password) {
-      return { success: false, error: "El correo y la contraseña son obligatorios" };
+      return {
+        success: false,
+        error: "El correo y la contraseña son obligatorios",
+      };
     }
+
     const result = await login(email, password);
+
+    // ─── Notificación al admin (no bloquea si falla) ───
+    // Se ejecuta después del login exitoso. notifyLogin tiene
+    // timeout interno de MAIL_TIMEOUT_MS, así que no puede
+    // colgar la respuesta al usuario más allá de ese límite.
+    await notifyLogin({
+      nombre: result.user.NOMBRE,
+      email: result.user.EMAIL,
+      sucursalNombre: result.user["NOMBRE_SUCURSAL"],
+      nombreEmpleado: result.user["NOMBRE_EMPLEADO"],
+    });
+
     return { success: true, data: result };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Error desconocido" };
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Error desconocido",
+    };
   }
 });
 
